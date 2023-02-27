@@ -294,12 +294,10 @@ if [ ! -z "$out_keyfile" ]; then # "if out_keyfile is well-defined, then..."
 fi
 if [ -z "$out_nop" ]; then # "if out_nop is NOT well-defined, then..."
 	createCommand="keepassxc-cli db-create $createOptions --set-password "$output_fn" < "$out_password_file""
-	ifDebug echo "**************Here! output_fn="$output_fn""
 else
 	createCommand="keepassxc-cli db-create $createOptions "$output_fn""
 fi
-ifDebug echo "createCommand: "$createCommand""
-#ifDebug echo 'execution DISABLED for debugging' || 
+#ifDebug echo "createCommand: "$createCommand""
 eval $createCommand
 
 mergeOptions='-q'
@@ -330,8 +328,7 @@ mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedir
 
 
 
-ifDebug echo "executing mergeCommand: "$mergeCommand""
-#ifDebug echo 'execution DISABLED for debugging' || 
+#ifDebug echo "executing mergeCommand: "$mergeCommand""
 eval $mergeCommand
 
 
