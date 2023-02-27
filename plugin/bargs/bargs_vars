@@ -4,38 +4,34 @@ short=i
 long=in
 description=Path to kdbx file to rekey
 prompt=true
-confirmation=true
----
-name=in_keyfile
-short=ik
-long=in-key
-description=Path to keyfile that currently opens the input kdbx
-prompt=true
-default=my-old.key
 ---
 name=output_fn
 short=o
 long=out
-description=Path where new (re-keyed) keyfile will be saved
-prompt=true
-default=new.kdbx
+description=Path where new (re-keyed) keyfile will be saved (defaults to ./rekeyed.kdbx if not specified)
+default=rekeyed.kdbx
+---
+name=in_keyfile
+short=ik
+long=in-keyfile
+description=Path to keyfile that currently opens the input kdbx
+allow_empty=true
 ---
 name=out_keyfile
 short=ok
-long=out-key
+long=out-keyfile
 description=Path to keyfile that will open the output
-prompt=true
-default=my-new.key
----
-name=out_password_file
-short=op
-description=(Optional) Path to file that contains password that will be applied to the new (re-keyed) kdbx
 allow_empty=true
 ---
 name=in_password_file
 short=ip
+description=Path to file that contains password to unlock input kdbx
 allow_empty=true
-description=(Optional) Path to file that contains password to unlock input kdbx
+---
+name=out_password_file
+short=op
+description=Path to file that contains password that will be applied to the new (re-keyed) kdbx
+allow_empty=true
 ---
 name=prompt_input_password
 short=pi

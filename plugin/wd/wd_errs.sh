@@ -20,7 +20,7 @@ function err_println() {
 }
 
 function warn() {
-	err_print "W:"
+	err_print "WARNING: "
 	if [[ $# == 0 ]]; then
 		err_println_basic 'Unspecified warning'
 		return 1
@@ -46,11 +46,6 @@ function crash() {
 		exitCode=default_crash_exitcode
 	fi
 
-	
-	#[ ! -z ${WD_SWASSEMBLY+x} ] && \
-		#err_print "$WD_SWASSEMBLY: "
-	#[ ! -z ${WD_SWCOMPONENT+x} ] && \
-		#err_print "$WD_SWCOMPONENT: "
 
 	err_println "crash reported"
 
@@ -64,5 +59,5 @@ function crash() {
 
 function crashland() {
 	err_println "crashland was called"
-	crash $@
+	crash "$@"
 }

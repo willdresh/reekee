@@ -1,5 +1,21 @@
 NORMAL OPERATION EXIT CODES
 0	Success
+1	Operation cancelled by user
 
 USERSPACE ERROR EXIT CODES
 11	keepassxc-cli not detected
+
+VALIDATION FAILED EXIT CODES
+50	input kdbx file not specified, does not exist, is not readable, or is not a regular file
+51	output kdbx file not specified, or exists and is not writable, or exists and is not a regular file
+52	input keyfile specified, exists, and is either unreadable or not a regular file
+		OR input keyfile specified and does not exist
+53	output keyfile specified, exists, and is either unreadable or not a regular file
+		OR output keyfile specified and does not exist
+54	output password file specified, but does not exist, is not a regular file, or is not readable
+55	input password file specified, but does not exist, is not a regular file, or is not readable
+56	both prompt-out-password and out-password-file specified
+57	both prompt-in-password and in-password-file specified
+
+OTHER EXIT CODES
+102	Unspecified

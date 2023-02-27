@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 ##*	File: rekey
 ##*	Author: Will
-export $WD_SWASSEMBLY 'rekey'
+export WD_SWASSEMBLY='rekey'
 
 source plugin/wd/wd_aux.sh
 source plugin/wd/wd_errs.sh
@@ -9,6 +9,21 @@ source plugin/wd/wd_errs.sh
 export BARGS_VARS_PATH="${PWD}/plugin/bargs/bargs_vars"
 source plugin/bargs/bargs.sh
 
+debug='rekey:12'
+
+
+##* vimnotes
+##  Marks
+##	n: vimnotes (YOU ARE HERE)
+## 	S: Startup Checks Start
+##	s: Startup Chucks End
+##	I: Input Validation Start
+##	i: Input Validation End
+##	E: Execution Start
+##	e: Execution End
+##	V: Verification Start
+##	v: Verification End
+##* endvimnotes
 
 
 
@@ -21,7 +36,7 @@ source plugin/bargs/bargs.sh
 
 ##*	subregion Prepare
 ##*	region Startup Checks
-export $WD_SWCOMPONENT 'startup'
+export WD_SWCOMPONENT 'startup'
 
 # Check availability of keepassxc-cli command
 kpcli="$(which keepassxc-cli)"
@@ -30,14 +45,23 @@ kpcli="$(which keepassxc-cli)"
 
 
 
-unset $WD_SWCOMPONENT
+unset WD_SWCOMPONENT
+##*	endregion
+
+##*	region Aliases
+alias ifDebug='[[ ! -z "$debug" ]] && [[ "$debug" != false ]] && [[ "$debug" != "0" ]] && '
+alias ifVerbose='([[ ! -z "$verbose" ]] && [[ "$verbose" != false ]] && [[ "$verbose" != "0" ]] ) && '
+alias ifNotQuiet='([[ -z "$quiet" ]] || [[ "$quiet" == false ]] || [[ "$quiet" == "0" ]] && '
+alias ifPromptOutPass='[[ ! -z "$prompt_output_password" ]] && [[ "$prompt_output_password" != false ]] && [[ "$prompt_output_password" != "0" ]] && '
+alias ifPromptInPass='[[ ! -z "$prompt_input_password" ]] && [[ "$prompt_input_password" != false ]] && [[ "$prompt_input_password" != "0" ]] && '
+shopt -s expand_aliases
 ##*	endregion
 
 
 
 
 ##*	region Input Validation
-export $WD_SWCOMPONENT='input-validation'
+export WD_SWCOMPONENT='input-validation'
 ######################################################################
 #####                                                               ##
 ####                       Input Validation                        ###
@@ -45,16 +69,74 @@ export $WD_SWCOMPONENT='input-validation'
 ##                                                               #####
 ######################################################################
 
+[ -z "$input_fn" ] || [ ! -r "$input_fn" ] || [ ! -f "$input_fn" ] \
+	&& crashland 50 'No input file specified, or the specified input file does not exist, or is not readable, or is not a regular file'
 
+# TODO: validate that output directory exists and is writable
+[ -z "$output_fn" ] || [ -d "$output_fn" ] \
+	&& crashland 51 'No output file specified, or the specified output file exists and is a directory'
+if [ -e $output_fn ]; then
+	[ ! -r "$output_fn" ] \
+		&& crashland 51 'Output file already exists and is not a regular file'
+	[ ! -w "$output_fn" ] \
+		&& crashland 51 'Output file already exists and is not writable'
+fi
 
-unset $WD_SWCOMPONENT
+if [ ! -z "$in_keyfile" ]; then						# If in_keyfile was specified
+	ifDebug echo "in_keyfile: $in_keyfile"
+	if [ -e "$in_keyfile" ]; then					# ... and it exists as a file
+									# ... and it's unreaadable, or is not a regular file
+		[ ! -r "$in_keyfile" ] || [ ! -f "$in_keyfile" ] \
+			&& crashland 52	'input keyfile specified, exists, and is either unreadable or not a regular file'
+	else
+		crashland 52 'input keyfile specified, but does not exist'
+	fi
+else
+	unset in_keyfile
+fi
+
+if [ ! -z "$out_keyfile" ]; then					# If out_keyfile was specified
+	if [ -e "$out_keyfile" ]; then					# ... and it exists as a file
+									# ... and it's unreaadable, or is not a regular file
+		[ ! -r "$out_keyfile" ] || [ ! -f "$out_keyfile" ] \
+			&& crashland 53	'output keyfile specified, exists, and is either unreadable or not a regular file'
+	else	
+		crashland 53 'output keyfile specified, but does not exist'
+	fi
+else
+	unset out_keyfile
+fi
+
+if [ ! -z "$out_password_file" ]; then
+	if [ ! -f "$out_password_file" ] || [ ! -r "$out_password_file" ]; then
+		crashland 54 'output password file specified, but does not exist, is not a regular file, or is not readable'
+	fi
+else
+	unset out_password_file
+fi
+
+if [ ! -z "$in_password_file" ]; then 
+	if [ ! -f "$in_password_file" ] || [ ! -r "$in_password_file" ]; then
+		crashland 55 'input password file specified, but does not exist, is not a regular file, or is not readable'
+	fi
+else
+	unset in_password_file
+fi
+
+ifPromptOutPass [ ! -z "$out_password_file" ] \
+	&& crashland 56 'both prompt-out-password and out-password-file specified'
+
+ifPromptInPass [ ! -z "$in_password_file" ] \
+	&& crashland 57 'both prompt-in-password and in-password-file specified'
+
+unset WD_SWCOMPONENT
 ##*	endregion
 
 
 
 
 ##*	region Execution
-export $WD_SWCOMPONENT='exec'
+export WD_SWCOMPONENT='exec'
 ######################################################################
 #####                                                               ##
 ####                          Execution                            ###
@@ -64,25 +146,26 @@ export $WD_SWCOMPONENT='exec'
 
 
 
-unset $WD_SWCOMPONENT
+unset WD_SWCOMPONENT
 ##*	endregion
 
 
 
 
 ##*	region Verify
-export $WD_SWCOMPONENT='verify'
+export WD_SWCOMPONENT='verify'
 ######################################################################
 #####                                                               ##
 ####                         Verification                          ###
-###                            mark E                             ####
+###                            mark V                             ####
 ##                                                               #####
 ######################################################################
 
 
 
-unset $WD_SWCOMPONENT
+
+unset WD_SWCOMPONENT
 ##*	endregion
 
-unset $WD_SWASSEMBLY
+unset WD_SWASSEMBLY
 ##* EoF
