@@ -51,7 +51,7 @@ kpcli="$(which keepassxc-cli)"
 tries=7
 unset xml_file
 while [ -z ${xml_file+x} ] || [ -e "$xml_file" ]; do
-	[[ tries <= 0 ]] && crash 2 "(infinite loop safeguard) Unable to find a suitable output .xml file within the allotted number of tries"
+	[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) Unable to find a suitable output .xml file within the allotted number of tries"
 	xml_file="tmp$RANDOM.xml"
 done
 
@@ -156,7 +156,7 @@ ifPromptOutPass pop=''
 if [ ! -z ${pip+x} ]; then
 	tries=4
 	while [ -z "$pip" ]; do
-		[[ $tries <= 0 ]] && crash 2 "(infinite loop safeguard) failed to enter input password within the alloted number of tries";
+		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to enter input password within the alloted number of tries";
 
 		prompt -s -p "Enter OLD (input) password: " pip
 		echo
@@ -166,7 +166,7 @@ if [ ! -z ${pip+x} ]; then
 
 	tries=7
 	while [ -z "$in_password_file" ] || [ -e "$in_password_file" ]; do
-		[[ $tries <= 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our input password within the alloted number of tries";
+		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our input password within the alloted number of tries";
 
 		in_password_file="~/tmp$RANDOM"
 		tries=$(( $tries - 1 ))
@@ -187,7 +187,7 @@ if [ ! -z ${pop+x} ]; then
 	ans=''
 	tries=4
 	while [ -z "$pop" ] || [[ "$pop" != "$ans" ]]; do
-		[[ tries <= 0 ]] && crash 2 "(infinite loop safeguard) failed to enter a password within the alloted number of tries";
+		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to enter a password within the alloted number of tries";
 
 		prompt -s -p "Enter NEW (output) password: " pop
 		echo
@@ -200,7 +200,7 @@ if [ ! -z ${pop+x} ]; then
 
 	tries=7
 	while [ -z "$out_password_file" ] || [ -e "$out_password_file" ]; do
-		[[ tries <= 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our output password within the alloted number of tries";
+		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our output password within the alloted number of tries";
 
 		in_password_file="~/tmp$RANDOM"
 
