@@ -33,6 +33,8 @@ debug='rekey:12'
 
 
 
+##*	region Startup Checks
+export WD_SWCOMPONENT 'startup'
 ######################################################################
 #####                                                               ##
 ####                       Startup Checks                          ###
@@ -40,16 +42,18 @@ debug='rekey:12'
 ##                                                               #####
 ######################################################################
 
-##*	subregion Prepare
-##*	region Startup Checks
-export WD_SWCOMPONENT 'startup'
-
 # Check availability of keepassxc-cli command
 kpcli="$(which keepassxc-cli)"
 [ -z "$kpcli" ] \
-	&& crashland 11 'unable to locate keepassxc-cli command'
+	&& crash 11 'unable to locate keepassxc-cli command'
 
-
+# Find an available tmpXXXXX.xml that we can use for exporting later
+tries=7
+unset xml_file
+while [ -z ${xml_file+x} ] || [ -e "$xml_file" ]; do
+	[[ tries <= 0 ]] && crash 2 "(infinite loop safeguard) Unable to find a suitable output .xml file within the allotted number of tries"
+	xml_file="tmp$RANDOM.xml"
+done
 
 unset WD_SWCOMPONENT
 ##*	endregion
@@ -83,6 +87,7 @@ export WD_SWCOMPONENT='input-validation'
 #			to check if file is only one line long (tested this a bit):
 #			[[ "$(head -n 1 "$out_password_file")" == "$(head -n 2 "$out_password_file") ]] && echo "it's a one-liner"
 #		OR exactly two lines long and both lines are identical (this format is ready to feed to keepassxc-cli)
+#	user-specified in_password_file should be only one line long
 
 [ -z "$input_fn" ] || [ ! -r "$input_fn" ] || [ ! -f "$input_fn" ] \
 	&& crashland 50 'No input file specified, or the specified input file does not exist, or is not readable, or is not a regular file'
@@ -269,7 +274,63 @@ export WD_SWCOMPONENT='exec'
 ##                                                               #####
 ######################################################################
 
-#keepassxc-cli export 
+#exportCommmand='crash -1 "exportCommand unassigned (wtf?)"'
+#exportOptions='-q'
+#if [ ! -z "$in_keyfile" ]; then  # "if in_keyfile is well-defined, then..."
+	#exportOptions="$exportOptions --key-file "$in_keyfile""
+#fi
+
+#if [ ! -z "$in_nop" ]; then  # "if in_nop is well-defined, then..."
+	#exportCommand="keepassxc-cli export $exportOptions --no-password > "$xml_file""
+#else
+	#exportCommand="keepassxc-cli export $exportOptions < "$in_password_file" > "$xml_file""
+#fi
+#ifDebug echo "executing exportCommand: $exportCommand"
+#$exportCommand
+
+createOptions='-q'
+if [ ! -z "$out_keyfile" ]; then # "if out_keyfile is well-defined, then..."
+	createOptions="$createOptions --set-key-file "$out_keyfile""
+fi
+if [ -z "$out_nop" ]; then # "if out_nop is NOT well-defined, then..."
+	createCommand="keepassxc-cli db-create $createOptions --set-password "$out_fn" < "$out_password_file""
+else
+	createCommand="keepassxc-cli db-create $createOptions "$out_fn""
+fi
+
+mergeOptions='-q'
+mergeRedirects=''
+[ ! -z "$in_keyfile" ] \
+	&& mergeOptions="$mergeOptions --key-file-from "$in_keyfile""
+[ ! -z "$out_keyfile" ] \
+	&& mergeOptions="$mergeOptions --key-file "$out_keyfile""
+[ ! -z "$in_nop" ] \
+	&& mergeOptions="$mergeOptions --no-password-from"
+if [ ! -z "$out_nop" ]; then
+	mergeOptions="$mergeOptions --no-password"
+	if [ -z "$in_nop" ]; then
+		# Redirect input from in-password-file only if there is an input password
+		#  but no output password
+		mergeRedirects="$mergeRedirects < "$in_password_file""
+	fi
+else
+	# Truncate out-password-file down to one line only
+	echo "$( head -n 1 $out_password_file )" > "$out_password_file"
+	# Append the input password to out-password-file, if applicable
+	[ -z "$in_nop" ] \
+		&& echo "$( head -n 1 $in_password_file )" >> "$out_password_file"
+	# Redirect input 
+	mergeRedirects="$mergeRedirects < "$out_password_file""
+fi
+mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedirects"
+
+
+ifDebug echo "executing createCommand: "$createCommand""
+ifDebug echo 'execution DISABLED for debugging' || $createCommand
+
+ifDebug echo "executing mergeCommand: "$mergeCommand""
+ifDebug echo 'execution DISABLED for debugging' || $mergeCommand
+
 
 unset WD_SWCOMPONENT
 ##*	endregion
