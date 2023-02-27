@@ -25,13 +25,27 @@ allow_empty=true
 ---
 name=in_password_file
 short=ip
+long=in-password-file
 description=Path to file that contains password to unlock input kdbx
 allow_empty=true
 ---
+name=sd_outpass
+short=sdop
+long=shred-input-password
+description=If specified, the input password file passed using the -ip option will be securely deleted after this script executes (this flag is only valid along with the -ip option)
+flag=true
+---
 name=out_password_file
 short=op
+long=out-password-file
 description=Path to file that contains password that will be applied to the new (re-keyed) kdbx
 allow_empty=true
+---
+name=sd_outpass
+short=sdop
+long=shred-output-password
+description=If specified, the output password file passed using the -op option will be securely deleted after this script executes (this flag is only valid along with the -op option)
+flag=true
 ---
 name=prompt_input_password
 short=pi

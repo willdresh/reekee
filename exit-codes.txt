@@ -2,6 +2,10 @@ NORMAL OPERATION EXIT CODES
 0	Success
 1	Operation cancelled by user
 
+APPLICATION ERROR EXIT CODES
+99	Could not verify successful creation of in_password_file
+66	Could not verify successful creation of out_password_file
+
 USERSPACE ERROR EXIT CODES
 11	keepassxc-cli not detected
 
@@ -18,4 +22,5 @@ VALIDATION FAILED EXIT CODES
 57	both prompt-in-password and in-password-file specified
 
 OTHER EXIT CODES
+2	infinite loop safeguard
 102	Unspecified
