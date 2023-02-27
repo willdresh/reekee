@@ -1,67 +1,73 @@
 ---
-name=person_name
-short=n
-description=What is your name?
-default="Willy Wonka"
----
-name=age
-short=a
-description=How old are you?
+name=input_fn
+short=i
+long=in
+description=Path to kdbx file to rekey
 prompt=true
 confirmation=true
 ---
-name=gender
-short=g
-description=male or female?
-options=male female
+name=in_keyfile
+short=ik
+long=in-key
+description=Path to keyfile that currently opens the input kdbx
 prompt=true
+default=my-old.key
 ---
-name=location
-short=l
-description=Where do you live?
-default="chocolate factory"
+name=output_fn
+short=o
+long=out
+description=Path where new (re-keyed) keyfile will be saved
+prompt=true
+default=new.kdbx
 ---
-name=favorite_food
-short=f
+name=out_keyfile
+short=ok
+long=out-key
+description=Path to keyfile that will open the output
+prompt=true
+default=my-new.key
+---
+name=out_password_file
+short=op
+description=(Optional) Path to file that contains password that will be applied to the new (re-keyed) kdbx
 allow_empty=true
-options=chocolate pizza
-description=chocolate or pizza?
 ---
-name=secret
-short=s
-default=!@#%^&*?/.,[]{}+-|
-description=special characters
+name=in_password_file
+short=ip
+allow_empty=true
+description=(Optional) Path to file that contains password to unlock input kdbx
 ---
-name=language
-short=lang
-default=$LANG
-description=default value can be a variable
----
-name=password
-short=p
-prompt=true
-hidden=true
-confirmation=true
-description=What is your password?
----
-name=happy
-short=hp
+name=prompt_input_password
+short=pi
+long=prompt-pass-in
 flag=true
-description=Flag for indicating that you are happy
+description=Ask rekey to prompt the user to enter the input password (to unlock existing kdbx) (not valid when \'ip\' option is specified)
 ---
-name=ci
-short=ci
+name=prompt_output_password
+short=po
+long=prompt-pass-out
 flag=true
-description=Flag for indicating it is a CI/CD process
+description=Ask rekey to prompt the user to enter and confirm a new password (for new, re-keyed kdbx) (not valid when \'op\' option is specified)
 ---
-name=username
-short=un
-allow_env_var=true
-description=Username fetched from environment variable
-default=willywonka
+name=quiet
+short=q
+long=quiet
+description=Be seen, but not heard (implies !verbose)
+flag=true
+---
+name=verbose
+short=v
+long=verbose
+description=Be louder and more obnoxious (not valid with \'quiet\' flag)
+flag=true
+---
+name=debug
+long=debug
+description=Debug mode (lots of output)(implies !quiet && verbose)
+flag=true
 ---
 name=bargs
-description=bash example.sh -n Willy --gender male -a 99
+description=bash rekey [options]
 default=irrelevant
 ---
 ---
