@@ -1,0 +1,88 @@
+#!/usr/bin/bash
+##*	File: rekey
+##*	Author: Will
+export $WD_SWASSEMBLY 'rekey'
+
+source plugin/wd/wd_aux.sh
+source plugin/wd/wd_errs.sh
+
+export BARGS_VARS_PATH="${PWD}/plugin/bargs/bargs_vars"
+source plugin/bargs/bargs.sh
+
+
+
+
+######################################################################
+#####                                                               ##
+####                       Startup Checks                          ###
+###                          vim mark S                           ####
+##                                                               #####
+######################################################################
+
+##*	subregion Prepare
+##*	region Startup Checks
+export $WD_SWCOMPONENT 'startup'
+
+# Check availability of keepassxc-cli command
+kpcli="$(which keepassxc-cli)"
+[ -z "$kpcli" ] \
+	&& crashland 11 'unable to locate keepassxc-cli command'
+
+
+
+unset $WD_SWCOMPONENT
+##*	endregion
+
+
+
+
+##*	region Input Validation
+export $WD_SWCOMPONENT='input-validation'
+######################################################################
+#####                                                               ##
+####                       Input Validation                        ###
+###                          vim mark I                           ####
+##                                                               #####
+######################################################################
+
+
+
+unset $WD_SWCOMPONENT
+##*	endregion
+
+
+
+
+##*	region Execution
+export $WD_SWCOMPONENT='exec'
+######################################################################
+#####                                                               ##
+####                          Execution                            ###
+###                            mark E                             ####
+##                                                               #####
+######################################################################
+
+
+
+unset $WD_SWCOMPONENT
+##*	endregion
+
+
+
+
+##*	region Verify
+export $WD_SWCOMPONENT='verify'
+######################################################################
+#####                                                               ##
+####                         Verification                          ###
+###                            mark E                             ####
+##                                                               #####
+######################################################################
+
+
+
+unset $WD_SWCOMPONENT
+##*	endregion
+
+unset $WD_SWASSEMBLY
+##* EoF

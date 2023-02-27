@@ -1,0 +1,5 @@
+NORMAL OPERATION EXIT CODES
+0	Success
+
+USERSPACE ERROR EXIT CODES
+11	keepassxc-cli not detected
