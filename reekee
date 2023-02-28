@@ -1,7 +1,7 @@
 #!/usr/bin/bash
-##*	File: rekey
+##*	File: reekee
 ##*	Author: Will
-export WD_SWASSEMBLY='rekey'
+export WD_SWASSEMBLY='reekee'
 
 source plugin/wd/wd_aux.sh
 source plugin/wd/wd_errs.sh
@@ -9,7 +9,7 @@ source plugin/wd/wd_errs.sh
 export BARGS_VARS_PATH="${PWD}/plugin/bargs/bargs_vars"
 source plugin/bargs/bargs.sh
 
-debug='rekey:12'
+debug='reekee:12'
 
 
 ##* vimnotes

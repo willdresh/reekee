@@ -77,7 +77,7 @@ description=Debug mode (lots of output)(implies !quiet && verbose)
 flag=true
 ---
 name=bargs
-description=bash rekey [options]
+description=bash reekee [options]
 default=irrelevant
 ---
 ---
