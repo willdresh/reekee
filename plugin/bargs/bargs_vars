@@ -29,8 +29,8 @@ long=in-password-file
 description=Path to file that contains password to unlock input kdbx
 allow_empty=true
 ---
-name=sd_outpass
-short=sdop
+name=sd_inpass
+short=sdip
 long=shred-input-password
 description=If specified, the input password file passed using the -ip option will be securely deleted after this script executes (this flag is only valid along with the -ip option)
 flag=true
