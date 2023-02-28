@@ -32,14 +32,19 @@ debug='reekee:12'
 ##* endvimnotes
 
 ##*	region Constants
-
 ## User configurable
+
+## Recommend using -q to suppress keepassxc-cli's stderr output
+## and password prompts
+defaultCreateOptions="-q"
+
 ## Shouldn't really need to change this though; the -q switch
 ## in 'keepassxc-cli db-create -q' actually seems to work
 defaultCreateRedirects=''
 
+## The -q switch doesn't work as of version 2.6.6, but we may as well try
+defaultMergeOptions="-q"
 
-##User configurable
 ## The -q switch in 'keepassxc-cli merge -q does not really work;
 ## I still get a couple of error messages to stderr from it  every time, no matter what
 ## Hence you might want to use '2 &> /dev/null ' here
@@ -291,26 +296,7 @@ export WD_SWCOMPONENT='exec'
 ##                                                               #####
 ######################################################################
 
-## This block disabled and will be removed soon
-## Unfortunately, keepassxc-cli's export command does not support
-## import operation into a database with a password
-## So, the merge command will be used instead
-## a password-protected 
-#exportCommmand='crash -1 "exportCommand unassigned (wtf?)"'
-#exportOptions='-q'
-#if [ ! -z "$in_keyfile" ]; then  # "if in_keyfile is well-defined, then..."
-	#exportOptions="$exportOptions --key-file "$in_keyfile""
-#fi
-
-#if [ ! -z "$in_nop" ]; then  # "if in_nop is well-defined, then..."
-	#exportCommand="keepassxc-cli export $exportOptions --no-password > "$xml_file""
-#else
-	#exportCommand="keepassxc-cli export $exportOptions < "$in_password_file" > "$xml_file""
-#fi
-#ifDebug echo "executing exportCommand: $exportCommand"
-#$exportCommand
-
-createOptions='-q'
+createOptions="$defaultCreateOptions"
 createRedirects=$defaultCreateRedirects
 if [ ! -z "$out_keyfile" ]; then # "if out_keyfile is well-defined, then..."
 	createOptions="$createOptions --set-key-file "$out_keyfile""
@@ -324,7 +310,7 @@ createCommand="$createCommand $createRedirects"
 ifDebug echo "createCommand: "$createCommand""
 eval $createCommand
 
-mergeOptions='-q'
+mergeOptions="$defaultMergeOptions"
 mergeRedirects="$defaultMergeRedirects"
 
 ## If in_keyfile specified
@@ -387,7 +373,7 @@ mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedir
 
 
 
-#ifDebug echo "executing mergeCommand: "$mergeCommand""
+ifDebug echo "executing mergeCommand: "$mergeCommand""
 eval $mergeCommand
 
 
