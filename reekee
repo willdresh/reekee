@@ -31,6 +31,35 @@ debug='reekee:12'
 ##
 ##* endvimnotes
 
+##*	region Constants
+
+## User configurable
+## Shouldn't really need to change this though; the -q switch
+## in 'keepassxc-cli db-create -q' actually seems to work
+defaultCreateRedirects=''
+
+
+##User configurable
+## The -q switch in 'keepassxc-cli merge -q does not really work;
+## I still get a couple of error messages to stderr from it  every time, no matter what
+## Hence you might want to use '2 &> /dev/null ' here
+defaultMergeRedirects='2 &> /dev/null '
+
+##*	endregion
+
+
+##*	region Aliases
+alias ifDebug='[[ ! -z "$debug" ]] && [[ "$debug" != false ]] && [[ "$debug" != "0" ]] && '
+alias ifVerbose='([[ ! -z "$verbose" ]] && [[ "$verbose" != false ]] && [[ "$verbose" != "0" ]] ) && '
+alias ifNotQuiet='([[ -z "$quiet" ]] || [[ "$quiet" == false ]] || [[ "$quiet" == "0" ]] && '
+alias ifPromptOutPass='[[ ! -z "$prompt_output_password" ]] && [[ "$prompt_output_password" != false ]] && [[ "$prompt_output_password" != "0" ]] && '
+alias ifPromptInPass='[[ ! -z "$prompt_input_password" ]] && [[ "$prompt_input_password" != false ]] && [[ "$prompt_input_password" != "0" ]] && '
+alias ifSDOutPass='[[ ! -z "$sd_outpass" ]] && [[ "$sd_outpass" != false ]] && [[ "$sd_outpass" != "0" ]] && '
+alias ifSDInPass='[[ ! -z "$sd_inpass" ]] && [[ "$sd_inpass" != false ]] && [[ "$sd_inpass" != "0" ]] && '
+alias secureDelete='shred -fun 8 ' # TODO: something better than this
+shopt -s expand_aliases
+##*	endregion
+
 
 
 ##*	region Startup Checks
@@ -41,6 +70,7 @@ export WD_SWCOMPONENT 'startup'
 ###                          vim mark S                           ####
 ##                                                               #####
 ######################################################################
+
 
 # Check availability of keepassxc-cli command
 kpcli="$(which keepassxc-cli)"
@@ -57,19 +87,6 @@ done
 
 unset WD_SWCOMPONENT
 ##*	endregion
-
-##*	region Aliases
-alias ifDebug='[[ ! -z "$debug" ]] && [[ "$debug" != false ]] && [[ "$debug" != "0" ]] && '
-alias ifVerbose='([[ ! -z "$verbose" ]] && [[ "$verbose" != false ]] && [[ "$verbose" != "0" ]] ) && '
-alias ifNotQuiet='([[ -z "$quiet" ]] || [[ "$quiet" == false ]] || [[ "$quiet" == "0" ]] && '
-alias ifPromptOutPass='[[ ! -z "$prompt_output_password" ]] && [[ "$prompt_output_password" != false ]] && [[ "$prompt_output_password" != "0" ]] && '
-alias ifPromptInPass='[[ ! -z "$prompt_input_password" ]] && [[ "$prompt_input_password" != false ]] && [[ "$prompt_input_password" != "0" ]] && '
-alias ifSDOutPass='[[ ! -z "$sd_outpass" ]] && [[ "$sd_outpass" != false ]] && [[ "$sd_outpass" != "0" ]] && '
-alias ifSDInPass='[[ ! -z "$sd_inpass" ]] && [[ "$sd_inpass" != false ]] && [[ "$sd_inpass" != "0" ]] && '
-alias secureDelete='shred -fun 8 ' # TODO: something better than this
-shopt -s expand_aliases
-##*	endregion
-
 
 
 
@@ -274,6 +291,11 @@ export WD_SWCOMPONENT='exec'
 ##                                                               #####
 ######################################################################
 
+## This block disabled and will be removed soon
+## Unfortunately, keepassxc-cli's export command does not support
+## import operation into a database with a password
+## So, the merge command will be used instead
+## a password-protected 
 #exportCommmand='crash -1 "exportCommand unassigned (wtf?)"'
 #exportOptions='-q'
 #if [ ! -z "$in_keyfile" ]; then  # "if in_keyfile is well-defined, then..."
@@ -289,6 +311,7 @@ export WD_SWCOMPONENT='exec'
 #$exportCommand
 
 createOptions='-q'
+createRedirects=$defaultCreateRedirects
 if [ ! -z "$out_keyfile" ]; then # "if out_keyfile is well-defined, then..."
 	createOptions="$createOptions --set-key-file "$out_keyfile""
 fi
@@ -297,25 +320,61 @@ if [ -z "$out_nop" ]; then # "if out_nop is NOT well-defined, then..."
 else
 	createCommand="keepassxc-cli db-create $createOptions "$output_fn""
 fi
-#ifDebug echo "createCommand: "$createCommand""
+createCommand="$createCommand $createRedirects"
+ifDebug echo "createCommand: "$createCommand""
 eval $createCommand
 
 mergeOptions='-q'
-mergeRedirects=''
+mergeRedirects="$defaultMergeRedirects"
+
+## If in_keyfile specified
 [ ! -z "$in_keyfile" ] \
-	&& mergeOptions="$mergeOptions --key-file-from "$in_keyfile""
+	&& mergeOptions="$mergeOptions --key-file-from "$in_keyfile"" # Stage path-to-inkeyfile as argument to keepassxc-cli merge
+
+# If out_keyfile specified
 [ ! -z "$out_keyfile" ] \
-	&& mergeOptions="$mergeOptions --key-file "$out_keyfile""
+	&& mergeOptions="$mergeOptions --key-file "$out_keyfile""     # Stage path-to-outkeyfile as argument to keepassxc-cli merge
+
+# If the input kdbx is passwordless
 [ ! -z "$in_nop" ] \
-	&& mergeOptions="$mergeOptions --no-password-from"
+	&& mergeOptions="$mergeOptions --no-password-from"            # Stage "no-password-from" option as argument to keepassxc-cli merge
+
+# If the output kdbx is passwordless
 if [ ! -z "$out_nop" ]; then
 	mergeOptions="$mergeOptions --no-password"
+
+	# If the input kdbx is passworded
 	if [ -z "$in_nop" ]; then
 		# Redirect input from in-password-file only if there is an input password
 		#  but no output password
 		mergeRedirects="$mergeRedirects < "$in_password_file""
 	fi
 else
+
+##############################################################################################
+#                                                                                            # 
+#           # This is admittedly confusing behavior, but is done to compensate for the       #
+#           # lack of ability of keepassxc-cli to accept files as inputs for passwords       #
+#                                                                                            # 
+#           # Since the ONLY way keepassxc-cli knows is to read it from stdin, what we       #
+#           # have to do is make sure it will read the passwords it needs in the correct     #
+#           # order.                                                                         #
+#                                                                                            # 
+#           # To accomplish this, we will use the following algoirthm:                       #
+#           #        IF there exists an input password, AND no output password...            #
+#           #            ( 0 ) read directly from $in_password_file - that's it!             #
+#           #                                                                                #
+#           #        ... Otherwise,                                                          #
+#           #                                                                                #
+#           #        ( 1*) Truncate our output password file to one line only                #
+#           #                                                                                # 
+#           #        IF there exists an input password AND an output password...             #
+#           #            ( 2 ) Append input password to the end (second line)                #
+#           #                 of output password                                             #
+#                                                                                            # 
+#                                                                                            # 
+##############################################################################################
+
 	# Truncate out-password-file down to one line only
 	echo "$( head -n 1 $out_password_file )" > "$out_password_file"
 	# Append the input password to out-password-file, if applicable
