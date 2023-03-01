@@ -1,4 +1,21 @@
 #!/usr/bin/zsh
+# written for bash/zsh
+
+function getInputFile() {
+	# TODO: implement
+	exit -1;
+	
+
+	## Adapt this algorithm from reekee
+	#local tries
+	#tries=7
+	#while [ -z "$in_password_file" ] || [ -e "$in_password_file" ]; do
+		#[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our input password within the alloted number of tries";
+
+		#in_password_file="~/tmp$RANDOM"
+		#tries=$(( $tries - 1 ))
+	#done
+}
 
 # TODO: instead of reading a line, read just one key
 function anyKeyContinue() {

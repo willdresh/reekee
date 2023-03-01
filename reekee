@@ -114,7 +114,9 @@ export WD_SWCOMPONENT='input-validation'
 [ -z "$input_fn" ] || [ ! -r "$input_fn" ] || [ ! -f "$input_fn" ] \
 	&& crashland 50 'No input file specified, or the specified input file does not exist, or is not readable, or is not a regular file'
 
-# TODO: validate that output directory exists and is writable
+outDir="$( dirname $output_fn )"
+[ ! -d "$outDir" ] || [ ! -w "$outDir" ] \
+	&& cashland 58 'Output directory (destination for new kdbx) does not exist or is not writable'
 [ -z "$output_fn" ] || [ -d "$output_fn" ] \
 	&& crashland 51 'No output file specified, or the specified output file exists and is a directory'
 if [ -e $output_fn ]; then
@@ -158,6 +160,7 @@ else
 	unset out_password_file
 fi
 
+# if in_password_filee is defined and non-empty
 if [ ! -z "$in_password_file" ]; then 
 	if [ ! -f "$in_password_file" ] || [ ! -r "$in_password_file" ]; then
 		crashland 55 'input password file specified, but does not exist, is not a regular file, or is not readable'
@@ -175,6 +178,7 @@ ifPromptOutPass [ ! -z "$out_password_file" ] \
 ifPromptInPass pip=''
 ifPromptOutPass pop=''
 
+# If user asked to be prompted for input password
 if [ ! -z ${pip+x} ]; then
 	tries=4
 	while [ -z "$pip" ]; do
@@ -189,8 +193,8 @@ if [ ! -z ${pip+x} ]; then
 	tries=7
 	while [ -z "$in_password_file" ] || [ -e "$in_password_file" ]; do
 		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our input password within the alloted number of tries";
-
-		in_password_file="~/tmp$RANDOM"
+		
+		in_password_file="$outDir$RANDOM"
 		tries=$(( $tries - 1 ))
 	done
 
@@ -201,38 +205,46 @@ if [ ! -z ${pip+x} ]; then
 	if [[ "$(cat $in_password_file)" == "$pip" ]]; then
 		pip=''
 	else
-		crash 99 "Unable to copy input password to temp file $in_password_file"
+		crash 99 "Unable to copy input password to temp file in $( dirname $in_password_file )"
 	fi
 fi
 
 if [ ! -z ${pop+x} ]; then
-	ans=''
-	tries=4
-	while [ -z "$pop" ] || [[ "$pop" != "$ans" ]]; do
-		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to enter a password within the alloted number of tries";
+	## DEPRECATED - we will allow keepassxc-cli to handle reading the output password
+	##* deprecated
+	#ans=''
+	#tries=4
+	#while [ -z "$pop" ] || [[ "$pop" != "$ans" ]]; do
+		#[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to enter a password within the alloted number of s";
 
-		prompt -s -p "Enter NEW (output) password: " pop
-		echo
+		#prompt -s -p "Enter NEW (output) password: " pop
+		#echo
 
-		prompt -s -p "Confirm NEW (output) password: " ans
-		echo
+		#prompt -s -p "Confirm NEW (output) password: " ans
+		#echo
 
-		tries=$(( $tries - 1 ))
-	done
+		#tries=$(( $tries - 1 ))
+	#done
+	##* enddeprecated
+
 
 	tries=7
 	while [ -z "$out_password_file" ] || [ -e "$out_password_file" ]; do
 		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our output password within the alloted number of tries";
 
-		in_password_file="~/tmp$RANDOM"
+		out_password_file="~/tmp$RANDOM"
 
 		tries=$(( $tries - 1 ))
 	done
 
-	echo "$pop" > "$out_password_file"
-	echo "$pop" >> "$out_password_file"
+	## Deprecated
+	##* deprecated
+	#echo "$pop" > "$out_password_file"
+	#echo "$pop" >> "$out_password_file"
+	##* enddeprecated
 
-	[ -e "$out_password_file" ] && ( sleep 120; secureDelete "$out_password_file" ) &	# TODO: there's gotta be a better way to ensure GC than this
+	# TODO: there's gotta be a better way to ensure GC than this
+	[ -e "$out_password_file" ] && ( sleep 120; secureDelete "$out_password_file" ) &
 	[ -O "$out_password_file" ] && chmod -f 600 "$out_password_file"
 
 	if [[ "$(head -n 1 $out_password_file)" == "$pop" ]]; then
@@ -296,23 +308,39 @@ export WD_SWCOMPONENT='exec'
 ##                                                               #####
 ######################################################################
 
+unset createCommand
 createOptions="$defaultCreateOptions"
-createRedirects=$defaultCreateRedirects
+createRedirects="$defaultCreateRedirects"
 if [ ! -z "$out_keyfile" ]; then # "if out_keyfile is well-defined, then..."
 	createOptions="$createOptions --set-key-file "$out_keyfile""
 fi
+
+# If there is to be a password for the output kdbx
 if [ -z "$out_nop" ]; then # "if out_nop is NOT well-defined, then..."
-	createCommand="keepassxc-cli db-create $createOptions --set-password "$output_fn" < "$out_password_file""
+	createRedirects="$createRedirects < $out_password_file"
+	createCommand="keepassxc-cli db-create $createOptions --set-password "$output_fn"" 
 else
 	createCommand="keepassxc-cli db-create $createOptions "$output_fn""
+fi
+
+# If we have no specified file from which to read the password for our output kdbx file
+if [ -z $out_password_file ] \
+	|| [ ! -e $out_password_file ]; then	# Redundant Safeguard; this condition won't exist because of our input validation constraints
+
+	# If user asked to be prompted for output pass
+	if [ ! -z ${in_nop+x} ]; then
+		createOptions="$createOptions --set-password"
+	else
+	fi
+
 fi
 createCommand="$createCommand $createRedirects"
 ifDebug echo "createCommand: "$createCommand""
 eval $createCommand
 
+unset mergeCommand
 mergeOptions="$defaultMergeOptions"
 mergeRedirects="$defaultMergeRedirects"
-
 ## If in_keyfile specified
 [ ! -z "$in_keyfile" ] \
 	&& mergeOptions="$mergeOptions --key-file-from "$in_keyfile"" # Stage path-to-inkeyfile as argument to keepassxc-cli merge
@@ -360,14 +388,18 @@ else
 #                                                                                            # 
 #                                                                                            # 
 ##############################################################################################
+	my_outpass_file="$outDir$out_password_file-x"
+	( sleep 120; secureDelete "$my_outpass_file" ) &	# TODO: improve GC; surely there's a better way
 
-	# Truncate out-password-file down to one line only
-	echo "$( head -n 1 $out_password_file )" > "$out_password_file"
-	# Append the input password to out-password-file, if applicable
+	# Truncate out-password-file down to one line only, and put that into my_outpass_file
+	echo "$( head -n 1 $out_password_file )" > "$my_outpass_file"
+
+	# If applicable, Append the input password to my_outpass-file
 	[ -z "$in_nop" ] \
-		&& echo "$( head -n 1 $in_password_file )" >> "$out_password_file"
-	# Redirect input 
-	mergeRedirects="$mergeRedirects < "$out_password_file""
+		&& echo "$( head -n 1 $in_password_file )" >> "$my_outpass_file"
+
+	# Redirect input from my_outpass_file
+	mergeRedirects="$mergeRedirects < "$my_outpass_file""
 fi
 mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedirects"
 
@@ -392,6 +424,17 @@ export WD_SWCOMPONENT='cleanup'
 ###                            markC                              ####
 ##                                                               #####
 ######################################################################
+
+[ -f $my_outpass_file ] \
+	&& secureDelete "$my_outpass_file"
+
+[ -f $in_password_file ] \
+ && [ ! -z "$sd_inpass" ] && ["$sd_inpass" -ne 0 ] && ["$sd_inpass" -ne false ] \
+	&& secureDelete "$in_password_file"
+
+[ -f $out_password_file ] \
+ && [ ! -z "$sd_outpass" ] && [ "$sd_outpass" -ne 0 ] && [ "$sd_outpass" -ne false ] \
+	&& secureDelete "$out_password_file"
 
 # If input password was entered via prompt
 if [ ! -z ${pip+x} ]; then

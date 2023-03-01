@@ -20,6 +20,7 @@ VALIDATION FAILED EXIT CODES
 55	input password file specified, but does not exist, is not a regular file, or is not readable
 56	both prompt-out-password and out-password-file specified
 57	both prompt-in-password and in-password-file specified
+58	directory of output keyfile does not exist
 
 OTHER EXIT CODES
 2	infinite loop safeguard
