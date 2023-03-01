@@ -9,24 +9,6 @@ source plugin/wd/wd_errs.sh
 export BARGS_VARS_PATH="${PWD}/plugin/bargs/bargs_vars"
 source plugin/bargs/bargs.sh
 
-##* vimnotes
-##  Marks
-##	n: vimnotes (YOU ARE HERE)
-##	L: (roaming) wherever I left off previously
-##		(assuming I remembered to set it)
-##
-## 	S: Startup Checks Start
-##	s: Startup Chucks End
-##	I: Input Validation Start
-##	i: Input Validation End
-##	E: Execution Start
-##	e: Execution End
-##	C: Cleanup Start
-##	c: Cleanup End
-##	V: Verification Start
-##	v: Verification End
-##
-##* endvimnotes
 
 ##*	region Aliases
 alias ifDebug='[[ ! -z "$debug" ]] && [[ "$debug" != false ]] && [[ "$debug" != "0" ]] && '
