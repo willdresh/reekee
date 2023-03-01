@@ -117,6 +117,8 @@ export WD_SWCOMPONENT='input-validation'
 outDir="$( dirname $output_fn )"
 [ ! -d "$outDir" ] || [ ! -w "$outDir" ] \
 	&& cashland 58 'Output directory (destination for new kdbx) does not exist or is not writable'
+[[ "$outDir" == "." ]] \
+	&& outDir="./" # dirname does not append a slash to the end of . - so we will (if needed)
 [ -z "$output_fn" ] || [ -d "$output_fn" ] \
 	&& crashland 51 'No output file specified, or the specified output file exists and is a directory'
 if [ -e $output_fn ]; then
@@ -210,8 +212,6 @@ if [ ! -z ${pip+x} ]; then
 fi
 
 if [ ! -z ${pop+x} ]; then
-	## DEPRECATED - we will allow keepassxc-cli to handle reading the output password
-	##* deprecated
 	#ans=''
 	#tries=4
 	#while [ -z "$pop" ] || [[ "$pop" != "$ans" ]]; do
@@ -331,6 +331,7 @@ if [ -z $out_password_file ] \
 	if [ ! -z ${in_nop+x} ]; then
 		createOptions="$createOptions --set-password"
 	else
+		eval ''
 	fi
 
 fi
