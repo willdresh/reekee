@@ -129,7 +129,7 @@ export WD_SWCOMPONENT='input-validation'
 
 outDir="$( dirname $output_fn )"
 [ ! -d "$outDir" ] || [ ! -w "$outDir" ] \
-	&& cashland 58 'Output directory (destination for new kdbx) does not exist or is not writable'
+	&& crashland 58 'Output directory (destination for new kdbx) does not exist or is not writable'
 [[ "$outDir" == "." ]] \
 	&& outDir="./" # dirname does not append a slash to the end of . - so we will (if needed)
 [ -z "$output_fn" ] || [ -d "$output_fn" ] \
@@ -142,13 +142,13 @@ if [ -e "$output_fn" ]; then
 
 	warn "Output file $output_fn already exists"
 	unset ans
-	promptYesNo "Overwrite existing $output_fn?"; ans=$?
+	promptYesNo "Overwrite existing $output_fn?" 3; ans=$?
 	[ "$ans" -eq 0 ] && exit 1	# Exit (code 1) if answered no
-	rm $output_fn
+	rm $output_fn; ans=$?
 
 	# If there STILL exists a file $output_fn at this point, then crash
-	[ -e "$output_fn" ] && crash 12 "Unable to remove pre-existing file: $output_fn (debug: search $0 for ae973)"
-                               # ae973
+	[ -e "$output_fn" ] && crash 12 "Unable to remove pre-existing file: $output_fn (rm command exited code $ans)(debug: search $0 for Ze973)"
+                               # Ze973
 fi
 
 

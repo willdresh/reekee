@@ -1,6 +1,11 @@
 #!/usr/bin/zsh
 # written for bash/zsh
 
+# note: in function promptYesNo, there exists a possible execution path
+# leading to program termination
+# In order for this path to have any chance to get executed, though, promptYesNo must be
+# called with a second parameter
+
 function getInputFile() {
 	# TODO: implement
 	exit -1;
@@ -27,27 +32,44 @@ function anyKeyContinue() {
 	echo
 }
 
+
+## Usage: promptYesNo ['prompt'] [onFailure_exit_code]
+## if onFailure_exit_code is supplied, then if we fail to get a valid y/n/yes/no
+## answer after $tries attempts, then we will call 'exit [onFailure_exit_code]'
+##
+## when onFailure_exit_code is NOT supplied, then exceeding $tries attempts
+## to get a response will cause promptYesNo to return 0
 function promptYesNo() {
+	local tries
+	tries=3
 	local prompt
 	local ans
 	ans=''
+	prompt=''
 
-	[ ! -z ${WD_SWASSEMBLY+x} ] && echo -n "$WD_SWASSEMBLY: "
-	[ ! -z ${WD_SWCOMPONENT+x} ] && echo -n "$WD_SWCOMPONENT: "
+	[ ! -z ${WD_SWASSEMBLY+x} ] && prompt="$prompt$WD_SWASSEMBLY: "
+	[ ! -z ${WD_SWCOMPONENT+x} ] && prompt="$prompt$WD_SWCOMPONENT: "
 
-	if [[ "$#" -gt 0 ]]; then
-		prompt="$1 (y/n/yes/no) "
-		shift 1
-	else
-		prompt="(y/n/yes/no) "
+	if [ "$#" -ne 0 ]; then
+		prompt=""$prompt""$1""
 	fi
 
-	while [[ ! $ans =~ ^([yYnN]|[yY][eE][sS]|[nN][oO])$ ]]; do
+	prompt="$prompt(y/n/yes/no) "
+
+	while [[ ! "$ans" =~ ^([yYnN]|[yY][eE][sS]|[nN][oO])$ ]] && [ $tries -gt 0 ]; do
 		echo -n "$prompt"
 		read ans
+		tries=$(( $tries - 1 ))
 	done
 
-	if [[ $ans =~ ^([yY]|[yY][eE][sS])$ ]]; then
+	# If we ran out of tries AND a second argument to promptYesNo was supplied
+	if [ $tries -le 0 ] && [ $# -ge 2 ]; then
+		exit $2;
+	fi
+	# Note: in the case where we ran out of tries but no second argument was supplied,
+	#   execution will continue and promptYesNo will return false
+
+	if [[ "$ans" =~ ^([yY]|[yY][eE][sS])$ ]]; then
 		return 1;
 	else
 		return 0;

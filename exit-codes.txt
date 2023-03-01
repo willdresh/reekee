@@ -1,10 +1,14 @@
 NORMAL OPERATION EXIT CODES
-0	Success
+0	Success - operation completed and all verification checks passed
 1	Operation cancelled by user
+2	Operation completed, but one or more verification checks failed
+3	Unable to obtain valid yes/no response when prompted
+		(this usually means the input stream was non-interactive and did
+		not expect to be asked - but it could also mean something else)
 
 APPLICATION ERROR EXIT CODES
-99	Could not verify successful creation of in_password_file
 66	Could not verify successful creation of out_password_file
+99	Could not verify successful creation of in_password_file
 
 USERSPACE ERROR EXIT CODES
 11	keepassxc-cli not detected
