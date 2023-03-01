@@ -1,0 +1,8 @@
+BUG:
+When running without --debug, it appears that the script doesn't execute all the way through
+The result is that execution LOOKS okay, but rekeyed.kdbx never gets created
+
+Seems the "eval" command on line 375 is not getting executed whenever debug is off
+NO IDEA why.
+Commenting out line 374 does not fix
+

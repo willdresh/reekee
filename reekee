@@ -67,12 +67,15 @@ ifDebug err_println 'begin'
 unset my_tmpFiles
 unset my_outpass_file
 
-ifDebug rmTmpFilesCommand=\
+rmTmpFilesCommand=\
 'eval "[[ ! -z \""$my_tmpFiles"\" ]] && shred -fun 5 $my_tmpFiles && err_println_basic && err_println "cleaned up tempfiles $my_tmpFiles""'
 
 trap "exit 6" TERM
 trap "exit 7" INT
 trap "exit 8" QUIT
+
+#Uncomment to always display which tempfiles were cleaned
+#trap "debug=true; ifDebug err_println_basic; ifDebug err_println 'done'; $rmTmpFilesCommand" EXIT
 trap "ifDebug err_println_basic; ifDebug err_println 'done'; $rmTmpFilesCommand" EXIT
 
 
@@ -368,8 +371,7 @@ if [ -z $out_password_file ] \
 
 fi
 createCommand="keepassxc-cli db-create $createOptions $output_fn $createRedirects"
-ifDebug echo "createCommand: "$createCommand""
-echo "createCommand: $createCommand"
+#ifDebug echo "createCommand: "$createCommand""
 eval $createCommand
 
 unset mergeCommand
