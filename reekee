@@ -9,9 +9,6 @@ source plugin/wd/wd_errs.sh
 export BARGS_VARS_PATH="${PWD}/plugin/bargs/bargs_vars"
 source plugin/bargs/bargs.sh
 
-debug='reekee:12'
-
-
 ##* vimnotes
 ##  Marks
 ##	n: vimnotes (YOU ARE HERE)
@@ -99,7 +96,7 @@ ifDebug rmTmpFilesCommand=\
 trap "exit 6" TERM
 trap "exit 7" INT
 trap "exit 8" QUIT
-trap "ifDebug err_println_basic; $rmTmpFilesCommand; ifDebug err_println 'done';" EXIT
+trap "ifDebug err_println_basic; ifDebug err_println 'done'; $rmTmpFilesCommand" EXIT
 
 
 # Check availability of keepassxc-cli command
