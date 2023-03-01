@@ -34,21 +34,24 @@ debug='reekee:12'
 ##*	region Constants
 ## User configurable
 
+
+# TODO: reset these to defaults before packaging
 ## Recommend using -q to suppress keepassxc-cli's stderr output
 ## and password prompts
-defaultCreateOptions="-q"
-
-## Shouldn't really need to change this though; the -q switch
-## in 'keepassxc-cli db-create -q' actually seems to work
-defaultCreateRedirects=''
+defaultCreateOptions=""
+defaultCreateRedirects=""
+defaultMergeOptions=""
+defaultMergeRedirects=""
+#defaultCreateOptions="-q"
+#defaultCreateRedirects='2 &> /dev/null'
 
 ## The -q switch doesn't work as of version 2.6.6, but we may as well try
-defaultMergeOptions="-q"
+#defaultMergeOptions="-q"
 
 ## The -q switch in 'keepassxc-cli merge -q does not really work;
 ## I still get a couple of error messages to stderr from it  every time, no matter what
 ## Hence you might want to use '2 &> /dev/null ' here
-defaultMergeRedirects='2 &> /dev/null '
+#defaultMergeRedirects='2 &> /dev/null '
 
 ##*	endregion
 
@@ -176,8 +179,9 @@ ifPromptInPass [ ! -z "$in_password_file" ] \
 ifPromptOutPass [ ! -z "$out_password_file" ] \
 	&& crashland 56 'both prompt-out-password and out-password-file specified'
 
-
+unset pip
 ifPromptInPass pip=''
+unset pop
 ifPromptOutPass pop=''
 
 # If user asked to be prompted for input password
@@ -212,20 +216,20 @@ if [ ! -z ${pip+x} ]; then
 fi
 
 if [ ! -z ${pop+x} ]; then
-	#ans=''
-	#tries=4
-	#while [ -z "$pop" ] || [[ "$pop" != "$ans" ]]; do
-		#[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to enter a password within the alloted number of s";
+	ans=''
+	tries=4
+	while [ -z "$pop" ] || [[ "$pop" != "$ans" ]]; do
+		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to enter a password within the alloted number of s";
 
-		#prompt -s -p "Enter NEW (output) password: " pop
-		#echo
+		prompt -s -p "Enter NEW (output) password: " pop
+		echo
 
-		#prompt -s -p "Confirm NEW (output) password: " ans
-		#echo
+		prompt -s -p "Confirm NEW (output) password: " ans
+		echo
 
-		#tries=$(( $tries - 1 ))
-	#done
-	##* enddeprecated
+		tries=$(( $tries - 1 ))
+	done
+	#* enddeprecated
 
 
 	tries=7
@@ -239,8 +243,9 @@ if [ ! -z ${pop+x} ]; then
 
 	## Deprecated
 	##* deprecated
-	#echo "$pop" > "$out_password_file"
-	#echo "$pop" >> "$out_password_file"
+	echo "$pop" > "$out_password_file"
+	echo "$pop" >> "$out_password_file"
+	pop=''
 	##* enddeprecated
 
 	# TODO: there's gotta be a better way to ensure GC than this
@@ -308,6 +313,8 @@ export WD_SWCOMPONENT='exec'
 ##                                                               #####
 ######################################################################
 
+## TODO: a lot of this could be more concisely carried out by
+## input validation subrouting; it's already performing these same checks
 unset createCommand
 createOptions="$defaultCreateOptions"
 createRedirects="$defaultCreateRedirects"
@@ -315,12 +322,16 @@ if [ ! -z "$out_keyfile" ]; then # "if out_keyfile is well-defined, then..."
 	createOptions="$createOptions --set-key-file "$out_keyfile""
 fi
 
-# If there is to be a password for the output kdbx
+## If there is to be a password for the output kdbx
 if [ -z "$out_nop" ]; then # "if out_nop is NOT well-defined, then..."
-	createRedirects="$createRedirects < $out_password_file"
-	createCommand="keepassxc-cli db-create $createOptions --set-password "$output_fn"" 
+	createOptions="$createOptions --set-password"
+
+	[ ! -z "$out_password_file" ] \
+		&& createRedirects="$createRedirects < $out_password_file"
+
+# If there is to be NO password for the output kdbx
 else
-	createCommand="keepassxc-cli db-create $createOptions "$output_fn""
+	eval '' #  Do nothing
 fi
 
 # If we have no specified file from which to read the password for our output kdbx file
@@ -335,7 +346,7 @@ if [ -z $out_password_file ] \
 	fi
 
 fi
-createCommand="$createCommand $createRedirects"
+createCommand="keepassxc-cli db-create $createOptions $output_fn $createRedirects"
 ifDebug echo "createCommand: "$createCommand""
 eval $createCommand
 
@@ -402,10 +413,8 @@ else
 	# Redirect input from my_outpass_file
 	mergeRedirects="$mergeRedirects < "$my_outpass_file""
 fi
+
 mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedirects"
-
-
-
 ifDebug echo "executing mergeCommand: "$mergeCommand""
 eval $mergeCommand
 
@@ -426,8 +435,9 @@ export WD_SWCOMPONENT='cleanup'
 ##                                                               #####
 ######################################################################
 
-[ -f $my_outpass_file ] \
-	&& secureDelete "$my_outpass_file"
+ifDebug echo "DEBUG: secure deletion of $my_outpass_file (my_outpass_file) disabled"
+#[ -f $my_outpass_file ] \
+	#&& secureDelete "$my_outpass_file"
 
 [ -f $in_password_file ] \
  && [ ! -z "$sd_inpass" ] && ["$sd_inpass" -ne 0 ] && ["$sd_inpass" -ne false ] \
