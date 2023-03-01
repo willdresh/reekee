@@ -49,11 +49,6 @@ ifDebug defaultMergeRedirects=""
 [ -z ${defaultMergeRedirects+x} ] \
 	&& defaultMergeRedirects=" 2 &> /dev/null"
 
-## The -q switch in 'keepassxc-cli merge -q does not really work;
-## I still get a couple of error messages to stderr from it  every time, no matter what
-## Hence you might want to use '2 &> /dev/null ' here
-#defaultMergeRedirects='2 &> /dev/null '
-
 ##*	endregion
 
 
@@ -154,6 +149,7 @@ if [ ! -z "$in_keyfile" ]; then						# If in_keyfile was specified
 		crashland 52 'input keyfile specified, but does not exist'
 	fi
 else
+	# If in_keyfileis not well-defined, then unset it (to formalize its state)
 	unset in_keyfile
 fi
 
@@ -166,6 +162,7 @@ if [ ! -z "$out_keyfile" ]; then					# If out_keyfile was specified
 		crashland 53 'output keyfile specified, but does not exist'
 	fi
 else
+	# If out_keyfileis not well-defined, then unset it (to formalize its state)
 	unset out_keyfile
 fi
 
@@ -174,15 +171,17 @@ if [ ! -z "$out_password_file" ]; then
 		crashland 54 'output password file specified, but does not exist, is not a regular file, or is not readable'
 	fi
 else
+	# If out_password_fileis not well-defined, then unset it (to formalize its state)
 	unset out_password_file
 fi
 
-# if in_password_filee is defined and non-empty
+# if in_password_file is defined and non-empty
 if [ ! -z "$in_password_file" ]; then 
 	if [ ! -f "$in_password_file" ] || [ ! -r "$in_password_file" ]; then
 		crashland 55 'input password file specified, but does not exist, is not a regular file, or is not readable'
 	fi
 else
+	# If in_password_fileis not well-defined, then unset it (to formalize its state)
 	unset in_password_file
 fi
 
@@ -212,6 +211,7 @@ if [ ! -z ${pip+x} ]; then
 	while [ -z "$in_password_file" ] || [ -e "$in_password_file" ]; do
 		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our input password within the alloted number of tries";
 		
+		# TODO: make this use mktemp !!	
 		in_password_file="$outDir$RANDOM"
 		tries=$(( $tries - 1 ))
 	done
@@ -227,6 +227,7 @@ if [ ! -z ${pip+x} ]; then
 	fi
 fi
 
+# If user asked to be prompted for output password
 if [ ! -z ${pop+x} ]; then
 	ans=''
 	tries=4
@@ -241,40 +242,48 @@ if [ ! -z ${pop+x} ]; then
 
 		tries=$(( $tries - 1 ))
 	done
-	#* enddeprecated
 
-
-	tries=7
-	while [ -z "$out_password_file" ] || [ -e "$out_password_file" ]; do
-		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our output password within the alloted number of tries";
-
-		out_password_file="~/tmp$RANDOM"
-
-		tries=$(( $tries - 1 ))
-	done
-
-	## Deprecated
 	##* deprecated
-	echo "$pop" > "$out_password_file"
-	echo "$pop" >> "$out_password_file"
-	pop=''
+	#tries=7
+	#while [ -z "$out_password_file" ] || [ -e "$out_password_file" ]; do
+		#[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our output password within the alloted number of tries";
+#
+		#out_password_file="~/tmp$RANDOM"
+#
+		#tries=$(( $tries - 1 ))
+	#done
 	##* enddeprecated
 
-	# Old: [ -e "$out_password_file" ] && ( sleep 120; secureDelete "$out_password_file" ) &
-	if [ -e "$out_password_file" ] && [ ! -z $sd_outpass ]; then
+	if [ -e "$out_password_file" ] && [ -z $sd_outpass ]; then
 		out_password_file="$(mktemp)"
-		my_tmpFiles="$my_tmpFiles '$out_password_file'"
+		my_tmpFiles="$my_tmpFiles '$out_password_file'"	# Register our newly-created file for cleanup on program exit
 	fi
-	[ -O "$out_password_file" ] && chmod -f 600 "$out_password_file"
+
+	# Output the user's password to that tempfile
+	echo "$pop" > "$out_password_file"
+	echo "$pop" >> "$out_password_file"
+
+	[ -O "$out_password_file" ] && chmod -f 600 "$out_password_file" # Make sure our permissions are still okay
 
 	if [[ "$(head -n 1 $out_password_file)" == "$pop" ]]; then
+	# Clear the password from pop for a little extra safety; we won't need it anymore
+	# Note that pop remains set to empty string, rather than being unset
+	# This allows us to retain knowledge of whether or not we read the output password from STDIN
+	# After this,
+	# 	[ -z ${pop+x} ]		will be true only if the user DID NOT supply their output password via STDIN
+	# 	[ -z "$pop" ]		will always be false
+
 		pop=''
 	else
 		crash 99 "Unable to copy output password to temp file $out_password_file"
 	fi
 fi
 
-if [ -z ${pip+x} ] && [ -z "$out_password_file" ]; then
+
+# Assign variables out_nop and in_nop
+# After this, out_nop will be true iff there is NO output password whatsoever
+# likewise in_nop for the input password
+if [ -z ${pip+x} ] && [ -z "$in_password_file" ]; then
 	out_nop='true'
 else
 	out_nop=''
@@ -418,8 +427,6 @@ else
 ##############################################################################################
 	my_outpass_file="$(mktemp)"
 	my_tmpFiles="$my_tmpFiles '$my_outpass_file'"
-	#Old: my_outpass_file="$outDir$out_password_file-x"
-	#( sleep 120; secureDelete "$my_outpass_file" ) &
 
 	# Truncate out-password-file down to one line only, and put that into my_outpass_file
 	echo "$( head -n 1 $out_password_file )" > "$my_outpass_file"
@@ -443,7 +450,6 @@ unset WD_SWCOMPONENT
 
 
 
-
 ##*	region Cleanup
 export WD_SWCOMPONENT='cleanup'
 ######################################################################
@@ -453,10 +459,6 @@ export WD_SWCOMPONENT='cleanup'
 ##                                                               #####
 ######################################################################
 
-ifDebug echo "DEBUG: secure deletion of $my_outpass_file (my_outpass_file) disabled"
-#[ -f $my_outpass_file ] \
-	#&& secureDelete "$my_outpass_file"
-
 [ -f $in_password_file ] \
  && [ ! -z "$sd_inpass" ] && ["$sd_inpass" -ne 0 ] && ["$sd_inpass" -ne false ] \
 	&& secureDelete "$in_password_file"
@@ -465,40 +467,41 @@ ifDebug echo "DEBUG: secure deletion of $my_outpass_file (my_outpass_file) disab
  && [ ! -z "$sd_outpass" ] && [ "$sd_outpass" -ne 0 ] && [ "$sd_outpass" -ne false ] \
 	&& secureDelete "$out_password_file"
 
-# If input password was entered via prompt
-if [ ! -z ${pip+x} ]; then
-	# The following conditional should be practically impossible to trigger, but JUST IN CASE,
-	# we'll try to add write permission to the file so that secure-delete can execute properly
-	[ ! -w "$in_password_file" ] \
-		&& chmod -f +w "$in_password_file"
+## This section deprecated by use of trap for cleanup
+## Nice going!
+## If input password was entered via prompt
+#if [ ! -z ${pip+x} ]; then
+	## The following conditional should be practically impossible to trigger, but JUST IN CASE,
+	## we'll try to add write permission to the file so that secure-delete can execute properly
+	#[ ! -w "$in_password_file" ] \
+		#&& chmod -f +w "$in_password_file"
+#
+	#secureDelete "$in_password_file"; ans=$?
+#
+	#[[ $ans != 0 ]] \
+		#&& warn "while cleaning up "$in_password_file" - secure-delete exited with non-zero exit code $?"
+	#[ -e "$in_password_file" ] \
+		#&& warn "unable to automatically remove "$in_password_file" - strongly recommend you secure-delete this file manually!"
+#
+	#unset pip
+#fi
+#
+## If output password was entered via prompt
+#if [ ! -z ${pop+x} ]; then
+	## The following conditional should be practically impossible to trigger, but JUST IN CASE,
+	## we'll try to add write permission to the file if we don't already have them
+	#[ ! -w "$in_password_file" ] \
+		#&& chmod -f +w "$out_password_file"
+	#
+	#secureDelete "$out_password_file"; ans=$?
+#
+	#[[ $ans != 0 ]] \
+		#&& warn "while cleaning up "$out_password_file" - secure-delete exited with non-zero exit code $?"
+	#[ -e "$out_password_file" ] \
+		#&& warn "unable to automatically remove "$out_password_file" - strongly recommend you secure-delete this file manually!"
 
-	secureDelete "$in_password_file"; ans=$?
-
-	[[ $ans != 0 ]] \
-		&& warn "while cleaning up "$in_password_file" - secure-delete exited with non-zero exit code $?"
-	[ -e "$in_password_file" ] \
-		&& warn "unable to automatically remove "$in_password_file" - strongly recommend you secure-delete this file manually!"
-
-	unset pip
-fi
-
-# If output password was entered via prompt
-if [ ! -z ${pop+x} ]; then
-	# The following conditional should be practically impossible to trigger, but JUST IN CASE,
-	# we'll try to add write permission to the file if we don't already have them
-	[ ! -w "$in_password_file" ] \
-		&& chmod -f +w "$out_password_file"
-	
-	secureDelete "$out_password_file"; ans=$?
-
-	[[ $ans != 0 ]] \
-		&& warn "while cleaning up "$out_password_file" - secure-delete exited with non-zero exit code $?"
-	[ -e "$out_password_file" ] \
-		&& warn "unable to automatically remove "$out_password_file" - strongly recommend you secure-delete this file manually!"
-
-	unset pop
-fi
-
+	#unset pop
+#fi
 
 unset WD_SWCOMPONENT
 ##* endregion
