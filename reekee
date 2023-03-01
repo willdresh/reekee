@@ -67,29 +67,8 @@ ifDebug err_println 'begin'
 unset my_tmpFiles
 unset my_outpass_file
 
-# LEFTOFF
-# This is causing some errors, (complaining about the conditional being wrongly formatted)
-# Try it with the folllowing command to get the errors to show up:
-#	./reekee -ik test/mock-key.key --debug -ok test/new-mock.key -pi -i test/TestKPCLI.kdbx -op test/out-pass
-# ... then enter P@ssword when prompted
-# Seems like the issue is that it's not properly expanding "$my_tmpFiles" whenever there are multiple files stored in that variable
-# i.e. if we have:
-#	my_tmpFiles=/e/x/ample/1 /e/x/ample/2
-# ... then instead of expanding it like we want to
-#	"/e/x/ample/1 /e/x/ample/2"
-# ... it's getting expanded instead to
-#	"/e/x/ample/1" "/e/x/ample/2"
-# However, I think the "rm -f" command NEEDS this second type of expansion in order to work properly...
-# So don't try to fix this bug by changing anything about either the rm command OR the way my_tmpFiles gets assigned
-# The only fix that could work is to change the expansion of $my_tmpFiles within the conditional, i.e. you could change:
-#	eval "[[ ! -z "$my_tmpFiles" ]] && ...
-# to
-#	eval "[[ ! -z \""$my_tmpFiles"\" ]] &&
 ifDebug rmTmpFilesCommand=\
 'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && err_println_basic && err_println "cleaned up tempfiles $my_tmpFiles""'
-# The "eval echo" command at the beginning was added for debugging purposes; it should be removed once
-# the bug is fixed
-# ( you'll want to remove from the first 'eval' up through (and including) the first semicolon )
 
 trap "exit 6" TERM
 trap "exit 7" INT
