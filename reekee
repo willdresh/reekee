@@ -78,7 +78,7 @@ ifDebug defaultMergeRedirects=""
 
 
 ##*	region Startup Checks
-export WD_SWCOMPONENT 'startup'
+export WD_SWCOMPONENT='startup'
 ######################################################################
 #####                                                               ##
 ####                       Startup Checks                          ###
