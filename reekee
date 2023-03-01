@@ -88,6 +88,18 @@ export WD_SWCOMPONENT 'startup'
 ###                          vim mark S                           ####
 ##                                                               #####
 ######################################################################
+ifDebug err_println 'begin'
+
+unset my_tmpFiles
+unset my_outpass_file
+
+ifDebug rmTmpFilesCommand=\
+'eval "[ ! -z $my_tmpFiles ] && rm -f $my_tmpFiles && err_println_basic && err_println "cleaned up tempfiles $my_tmpFiles""'
+
+trap "exit 6" TERM
+trap "exit 7" INT
+trap "exit 8" QUIT
+trap "ifDebug err_println_basic; $rmTmpFilesCommand; ifDebug err_println 'done';" EXIT
 
 
 # Check availability of keepassxc-cli command
@@ -96,12 +108,14 @@ kpcli="$(which keepassxc-cli)"
 	&& crash 11 'unable to locate keepassxc-cli command'
 
 # Find an available tmpXXXXX.xml that we can use for exporting later
-tries=7
-unset xml_file
-while [ -z ${xml_file+x} ] || [ -e "$xml_file" ]; do
-	[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) Unable to find a suitable output .xml file within the allotted number of tries"
-	xml_file="tmp$RANDOM.xml"
-done
+# disabled because we don't need to use an xml file after all
+#tries=7
+#unset xml_file
+#while [ -z ${xml_file+x} ] || [ -e "$xml_file" ]; do
+	#[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) Unable to find a suitable output .xml file within the allotted number of tries"
+	#xml_file="tmp$RANDOM.xml"
+#done
+
 
 unset WD_SWCOMPONENT
 ##*	endregion
@@ -267,8 +281,11 @@ if [ ! -z ${pop+x} ]; then
 	pop=''
 	##* enddeprecated
 
-	# TODO: there's gotta be a better way to ensure GC than this
-	[ -e "$out_password_file" ] && ( sleep 120; secureDelete "$out_password_file" ) &
+	# Old: [ -e "$out_password_file" ] && ( sleep 120; secureDelete "$out_password_file" ) &
+	if [ -e "$out_password_file" ] && [ ! -z $sd_outpass ]; then
+		out_password_file="$(mktemp)"
+		my_tmpFiles="$my_tmpFiles '$out_password_file'"
+	fi
 	[ -O "$out_password_file" ] && chmod -f 600 "$out_password_file"
 
 	if [[ "$(head -n 1 $out_password_file)" == "$pop" ]]; then
@@ -420,8 +437,10 @@ else
 #                                                                                            # 
 #                                                                                            # 
 ##############################################################################################
-	my_outpass_file="$outDir$out_password_file-x"
-	( sleep 120; secureDelete "$my_outpass_file" ) &	# TODO: improve GC; surely there's a better way
+	my_outpass_file="$(mktemp)"
+	my_tmpFiles="$my_tmpFiles '$my_outpass_file'"
+	#Old: my_outpass_file="$outDir$out_password_file-x"
+	#( sleep 120; secureDelete "$my_outpass_file" ) &
 
 	# Truncate out-password-file down to one line only, and put that into my_outpass_file
 	echo "$( head -n 1 $out_password_file )" > "$my_outpass_file"

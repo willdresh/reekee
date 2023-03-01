@@ -6,6 +6,7 @@
 # In order for this path to have any chance to get executed, though, promptYesNo must be
 # called with a second parameter
 
+
 function getInputFile() {
 	# TODO: implement
 	exit -1;

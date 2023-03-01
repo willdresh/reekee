@@ -5,6 +5,11 @@ NORMAL OPERATION EXIT CODES
 3	Unable to obtain valid yes/no response when prompted
 		(this usually means the input stream was non-interactive and did
 		not expect to be asked - but it could also mean something else)
+4	unused
+5	unused
+6	Interrupted with signal TERM - not to worry, tempfiles will be deleted if necessary
+7	Interrupted with signal INT - not to worry, tempfiles will be deleted if necessary
+8	Interrupted with signal QUIT - not to worry, tempfiles will be deleted if necessary
 
 APPLICATION ERROR EXIT CODES
 66	Could not verify successful creation of out_password_file
