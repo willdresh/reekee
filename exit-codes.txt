@@ -8,6 +8,7 @@ APPLICATION ERROR EXIT CODES
 
 USERSPACE ERROR EXIT CODES
 11	keepassxc-cli not detected
+12	unable to remove pre-existing output_fn (only possible if --overwrite-out was specified OR user answered yes when asked to remove)
 
 VALIDATION FAILED EXIT CODES
 50	input kdbx file not specified, does not exist, is not readable, or is not a regular file

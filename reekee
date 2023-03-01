@@ -31,31 +31,6 @@ debug='reekee:12'
 ##
 ##* endvimnotes
 
-##*	region Constants
-## User configurable
-
-
-# TODO: reset these to defaults before packaging
-## Recommend using -q to suppress keepassxc-cli's stderr output
-## and password prompts
-defaultCreateOptions=""
-defaultCreateRedirects=""
-defaultMergeOptions=""
-defaultMergeRedirects=""
-#defaultCreateOptions="-q"
-#defaultCreateRedirects='2 &> /dev/null'
-
-## The -q switch doesn't work as of version 2.6.6, but we may as well try
-#defaultMergeOptions="-q"
-
-## The -q switch in 'keepassxc-cli merge -q does not really work;
-## I still get a couple of error messages to stderr from it  every time, no matter what
-## Hence you might want to use '2 &> /dev/null ' here
-#defaultMergeRedirects='2 &> /dev/null '
-
-##*	endregion
-
-
 ##*	region Aliases
 alias ifDebug='[[ ! -z "$debug" ]] && [[ "$debug" != false ]] && [[ "$debug" != "0" ]] && '
 alias ifVerbose='([[ ! -z "$verbose" ]] && [[ "$verbose" != false ]] && [[ "$verbose" != "0" ]] ) && '
@@ -67,6 +42,41 @@ alias ifSDInPass='[[ ! -z "$sd_inpass" ]] && [[ "$sd_inpass" != false ]] && [[ "
 alias secureDelete='shred -fun 8 ' # TODO: something better than this
 shopt -s expand_aliases
 ##*	endregion
+
+##*	region Constants
+## User configurable
+unset defaultCreateOptions
+unset defaultCreateRedirects
+unset defaultMergeOptions
+unset defaultMergeRedirects
+
+
+## Recommended default behavior established below:
+## if verbose OR debug, then don't pass the -q option
+## if debug then additionally, don't redirect stderr to /dev/null
+eval ifDebug true || ifVerbose defaultCreateOptions=""
+[ -z ${defaultCreateOptions+x} ] \
+	&& defaultCreateOptions="-q"
+
+ifDebug defaultCreateRedirects=""
+[ -z ${defaultCreateRedirects+x} ] \
+	&& defaultCreateRedirects=" 2&> /dev/null"
+
+eval ifDebug true || ifVerbose defaultMergeOptions=""
+[ -z ${defaultMergeOptions+x} ] \
+	&& defaultMergeOptions="-q"
+
+ifDebug defaultMergeRedirects=""
+[ -z ${defaultMergeRedirects+x} ] \
+	&& defaultMergeRedirects=" 2 &> /dev/null"
+
+## The -q switch in 'keepassxc-cli merge -q does not really work;
+## I still get a couple of error messages to stderr from it  every time, no matter what
+## Hence you might want to use '2 &> /dev/null ' here
+#defaultMergeRedirects='2 &> /dev/null '
+
+##*	endregion
+
 
 
 
@@ -124,14 +134,23 @@ outDir="$( dirname $output_fn )"
 	&& outDir="./" # dirname does not append a slash to the end of . - so we will (if needed)
 [ -z "$output_fn" ] || [ -d "$output_fn" ] \
 	&& crashland 51 'No output file specified, or the specified output file exists and is a directory'
-if [ -e $output_fn ]; then
+if [ -e "$output_fn" ]; then
 	[ ! -f "$output_fn" ] \
 		&& crashland 51 'Output file already exists and is not a regular file'
 	[ ! -w "$output_fn" ] \
 		&& crashland 51 'Output file already exists and is not writable'
 
-	warn "Output file $output_fn already exists and will be overwritten"
+	warn "Output file $output_fn already exists"
+	unset ans
+	promptYesNo "Overwrite existing $output_fn?"; ans=$?
+	[ "$ans" -eq 0 ] && exit 1	# Exit (code 1) if answered no
+	rm $output_fn
+
+	# If there STILL exists a file $output_fn at this point, then crash
+	[ -e "$output_fn" ] && crash 12 "Unable to remove pre-existing file: $output_fn (debug: search $0 for ae973)"
+                               # ae973
 fi
+
 
 if [ ! -z "$in_keyfile" ]; then						# If in_keyfile was specified
 	if [ -e "$in_keyfile" ]; then					# ... and it exists as a file
@@ -348,6 +367,7 @@ if [ -z $out_password_file ] \
 fi
 createCommand="keepassxc-cli db-create $createOptions $output_fn $createRedirects"
 ifDebug echo "createCommand: "$createCommand""
+echo "createCommand: $createCommand"
 eval $createCommand
 
 unset mergeCommand

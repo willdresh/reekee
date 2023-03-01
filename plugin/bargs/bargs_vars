@@ -11,6 +11,12 @@ long=out
 description=Path where new (re-keyed) keyfile will be saved (defaults to ./rekeyed.kdbx if not specified)
 default=rekeyed.kdbx
 ---
+name=overwrite_out_fn
+short=oo
+long=overwrite-out
+description=Overwrite existing output kdbx file without first prompting for confirmation
+flag=true
+---
 name=in_keyfile
 short=ik
 long=in-keyfile
