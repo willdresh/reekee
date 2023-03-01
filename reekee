@@ -207,18 +207,12 @@ if [ ! -z ${pip+x} ]; then
 		tries=$(( $tries - 1 )) 
 	done
 
-	tries=7
-	while [ -z "$in_password_file" ] || [ -e "$in_password_file" ]; do
-		[[ $tries -le 0 ]] && crash 2 "(infinite loop safeguard) failed to find a file for our input password within the alloted number of tries";
-		
-		# TODO: make this use mktemp !!	
-		in_password_file="$outDir$RANDOM"
-		tries=$(( $tries - 1 ))
-	done
+	in_password_file="$(mktemp)"
+	my_tmpFiles="$my_tmpFiles '$in_password_file'"	# Register our newly-created file for cleanup on program exit
+	
 
 	echo "$pip" > "$in_password_file"
-	[ -e "$in_password_file" ] && ( sleep 120; secureDelete "$in_password_file" ) &	# TODO: there's gotta be a better way to ensure GC than this...
-	[ -O "$in_password_file" ] && chmod -f 600 "$in_password_file"
+	[ -O "$in_password_file" ] && chmod -f 600 "$in_password_file" # Make sure permissions are still the way we like em
 
 	if [[ "$(cat $in_password_file)" == "$pip" ]]; then
 		pip=''
@@ -254,15 +248,18 @@ if [ ! -z ${pop+x} ]; then
 	#done
 	##* enddeprecated
 
-	if [ -e "$out_password_file" ] && [ -z $sd_outpass ]; then
-		out_password_file="$(mktemp)"
-		my_tmpFiles="$my_tmpFiles '$out_password_file'"	# Register our newly-created file for cleanup on program exit
-	fi
+	# RECENT CHANGE: removed a conditional wrapped around these 2 lines
+	# not sure why it was there in the first place, but if something breaks,
+	# you can try putting it back
+	# I think it's better this way...
+	# (if the conditional is needed here, then you'll also need one around line 210
+	out_password_file="$(mktemp)"
+	my_tmpFiles="$my_tmpFiles '$out_password_file'"	# Register our newly-created file for cleanup on program exit
 
-	# Output the user's password to that tempfile
+	# Output the user's password to that tempfile - twice
+	# We do this twice because keepassxc-cli will ask us to confirm the password
 	echo "$pop" > "$out_password_file"
 	echo "$pop" >> "$out_password_file"
-
 	[ -O "$out_password_file" ] && chmod -f 600 "$out_password_file" # Make sure our permissions are still okay
 
 	if [[ "$(head -n 1 $out_password_file)" == "$pop" ]]; then
