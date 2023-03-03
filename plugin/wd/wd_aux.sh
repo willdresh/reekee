@@ -27,10 +27,10 @@ function getInputFile() {
 function anyKeyContinue() {
 	local noop
 
-	echo 'Press any key to continue... '
+	err_println_basic 'Press any key to continue... '
 	read noop
 
-	echo
+	err_println_basic
 }
 
 
@@ -58,7 +58,7 @@ function promptYesNo() {
 	prompt="$prompt (y/n/yes/no) "
 
 	while [[ ! "$ans" =~ ^([yYnN]|[yY][eE][sS]|[nN][oO])$ ]] && [ $tries -gt 0 ]; do
-		echo -n "$prompt"
+		err_print "$prompt"
 		read ans
 		tries=$(( $tries - 1 ))
 	done
@@ -86,18 +86,18 @@ function confirmContinue() {
 }
 
 function printSeedPrompt() {
-	echo 'GPG will now prompt you to enter and confirm a "password" (actually, our seed value)'
-	echo 'Please note that whatever you enter should be...
+	err_println_basic 'GPG will now prompt you to enter and confirm a "password" (actually, our seed value)'
+	err_println_basic 'Please note that whatever you enter should be...
 		(1) securely generated; should
 		(2) contain as much entropy as possible (up to 512 bits), and should
 		(3) be FORGOTTEN IMMEDIATELY after key creation'
-	echo ''
+	err_println_basic ''
 }
 
 function printSeedAdditionalInfo() {
-	echo 'This value will NOT actually be used as a password; rather, its purpose is to assist in generating a cryptographically-secure seed value.'
-	echo 'This seed value should remain unknown everyone; it should not be memorized or recorded at all'
-	echo ''
+	err_println_basic 'This value will NOT actually be used as a password; rather, its purpose is to assist in generating a cryptographically-secure seed value.'
+	err_println_basic 'This seed value should remain unknown everyone; it should not be memorized or recorded at all'
+	err_println_basic ''
 }
 
 
