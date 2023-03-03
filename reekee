@@ -518,7 +518,26 @@ export WD_SWCOMPONENT='verify'
 ##                                                               #####
 ######################################################################
 
+function verifyKdbxInputCredentials() {
+	local kpxcCommand
+	local kpxcRedirects
+	local ans
+	
+	kpxcCommand="keepassxc-cli db-info"
+	kpxcRedirects='2 &> /dev/null'
+	ifDebug kpxcRedirects=''
+	[ ! -z "$in_keyfile" ] \
+		&& kpxcCommand="$kpxcCommand -k $in_keyfile"
+	[ -z "$in_password_file" ] && [ -z ${nip+x} ] \
+		&& kpxcCommand="$kpxcCommand --no-password"
+	[ ! -z "$in_password_file" ] \
+		&& kpxcRedirects="$kpxcRedirects < $in_password_file"
+	
+	ifDebug err_println "VERIFICATION: executing $kpxcCommand $kpxcRedirects"
+	ans=$kpxcCommand $kpxcRedirects
 
+	return $ans
+}
 
 
 unset WD_SWCOMPONENT
