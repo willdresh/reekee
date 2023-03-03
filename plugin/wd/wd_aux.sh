@@ -55,7 +55,7 @@ function promptYesNo() {
 		prompt=""$prompt""$1""
 	fi
 
-	prompt="$prompt(y/n/yes/no) "
+	prompt="$prompt (y/n/yes/no) "
 
 	while [[ ! "$ans" =~ ^([yYnN]|[yY][eE][sS]|[nN][oO])$ ]] && [ $tries -gt 0 ]; do
 		echo -n "$prompt"
