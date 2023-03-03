@@ -40,14 +40,11 @@ ifDebug eval true || ifVerbose defaultCreateOptions=""
 [ -z ${defaultCreateOptions+x} ] \
 	&& defaultCreateOptions="-q"
 
-ifDebug defaultCreateRedirects=""
-[ -z ${defaultCreateRedirects+x} ] \
-	&& defaultCreateRedirects="&> /dev/null"
+defaultCreateRedirects="2> /dev/null"
 
 # Using -q switch with mergeOptions seems to break merge verification, so we will only do so
 # if verification is disabled
 defaultMergeOptions=""
-
 
 kpxcOutputTmpFile="$(mktemp)"
 my_tmpFiles="$my_tmpFiles $kpxcOutputTmpFile"
@@ -60,12 +57,15 @@ else
 	defaultMergeRedirects="> $kpxcOutputTmpFile"
 fi
 
-# TODO: enabling the redirect 2&>> /dev/null DOES suppress the stderr output as desired,
+# TODO: enabling the redirect 2&> /dev/null DOES suppress the stderr output as desired,
 # but also removes the STDOUT output, meaning that no keyfile actually gets created!
 # Need to fix this so that stderr can be suppressed AND stdout can still work as intended
-#ifDebug eval true || defaultInfoRedirects="$defaultCreateRedirects 2> /dev/null"
 ifDebug eval true || defaultMergeRedirects="$defaultMergeRedirects 2> /dev/null"
-defaultCreateRedirects="$defaultCreateRedirects 2> /dev/null"
+
+#echo "defaultMergeRedirects: $defaultMergeRedirects"
+#echo "defaultMergeOptions: $defaultMergeOptions"
+#echo "defaultCreateRedirects: $defaultCreateRedirects"
+#echo "defaultCreateOptions: $defaultCreateOptions"
 
 ##*	endregion
 
@@ -79,6 +79,8 @@ function verifyInputKdbxCredentials() {
 	local ans
 
 	[ ! -z "$disable_verification" ] && return 0
+
+	ifVerbose err_print "Verifying input kdbx credentials... "
 
 	oldComp="$WD_SWCOMPONENT"
 	export WD_SWCOMPONENT="$WD_SWCOMPONENT: verifyInputKdbxCredentials()"
@@ -102,8 +104,9 @@ function verifyInputKdbxCredentials() {
 	ifDebug err_println_basic
 
 	eval "$infoCommand"; ans=$?
-	ifDebug err_println "kpxc exit status: $ans"
 	ifDebug err_println_basic
+	ifVerbose err_println_basic "verification complete (kpxc exit status: $ans)"
+	ifVerbose err_println_basic
 
 	export WD_SWCOMPONENT="$oldComp"
 	return $ans
@@ -524,28 +527,19 @@ fi
 
 mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedirects"
 ifDebug err_println 'executing mergeCommand:'
-err_println_basic "$mergeCommand"
-#ifDebug err_println_basic "$mergeCommand"
+ifDebug err_println_basic "$mergeCommand"
+if [ -z "$disable_verification" ]; then
+	# Print a prefix if the merge command is going to produce output to terminal
+	# (the prefix contains more spacing if multi-line output is expected, i.e. in debug mode)
+	ifDebug ( \
+		err_println_basic; err_println_basic; \
+		err_println_basic "Begin Output from keepassxc-cli"; \
+	) || err_print_basic 'keepassxc-cli: '
 
-# if '-q' is one of our merge options, then expect output from keepassxc-cli to stdout
-# Nothing I can do about it if we want to have merge verification, apparently
-[[ $mergeOptions =~ '-q' ]] || err_print_basic 'keepassxc-cli: '
-eval $mergeCommand; mergeExitStatus=$?
-
-unset verifyMergeSucceeded
-# Verify: did keepassxc-cli report success from the merge operation?
-if [ -z "$disable_verification" ] && [ -f "$kpxcOutputTmpFile" ]; then
-	grep "Successfully" "$kpxcOutputTmpFile"; ans=$?
-	if [[ $ans == 0 ]]; then
-		ifDebug err_println "Merge verification succeeded"
-		verifyMergeSucceeded='true'
-	else
-		warn "Merge verification failed"
-		verifyMergeSucceeded=''
-	fi
-else
-	ifDebug err_println "Unable to verify merge operation (no tmpfile to grep from)"
 fi
+eval $mergeCommand; mergeExitStatus=$?
+ifDebug ( err_println_basic; err_println_basic "End output from keepassxc-cli"; )
+ifVerbose err_println "keepassxc-cli merge command exited with status code $mergeExitStatus"
 
 unset WD_SWCOMPONENT
 ##*	endregion
@@ -570,43 +564,6 @@ export WD_SWCOMPONENT='cleanup'
  && [ ! -z "$sd_outpass" ] && [ "$sd_outpass" -ne 0 ] && [ "$sd_outpass" -ne false ] \
 	&& secureDelete "$out_password_file"
 
-## This section deprecated by use of trap for cleanup
-## Nice going!
-## If input password was entered via prompt
-#if [ ! -z ${pip+x} ]; then
-	## The following conditional should be practically impossible to trigger, but JUST IN CASE,
-	## we'll try to add write permission to the file so that secure-delete can execute properly
-	#[ ! -w "$in_password_file" ] \
-		#&& chmod -f +w "$in_password_file"
-#
-	#secureDelete "$in_password_file"; ans=$?
-#
-	#[[ $ans != 0 ]] \
-		#&& warn "while cleaning up "$in_password_file" - secure-delete exited with non-zero exit code $?"
-	#[ -e "$in_password_file" ] \
-		#&& warn "unable to automatically remove "$in_password_file" - strongly recommend you secure-delete this file manually!"
-#
-	#unset pip
-#fi
-#
-## If output password was entered via prompt
-#if [ ! -z ${pop+x} ]; then
-	## The following conditional should be practically impossible to trigger, but JUST IN CASE,
-	## we'll try to add write permission to the file if we don't already have them
-	#[ ! -w "$in_password_file" ] \
-		#&& chmod -f +w "$out_password_file"
-	#
-	#secureDelete "$out_password_file"; ans=$?
-#
-	#[[ $ans != 0 ]] \
-		#&& warn "while cleaning up "$out_password_file" - secure-delete exited with non-zero exit code $?"
-	#[ -e "$out_password_file" ] \
-		#&& warn "unable to automatically remove "$out_password_file" - strongly recommend you secure-delete this file manually!"
-
-	#unset pop
-#fi
-
-unset WD_SWCOMPONENT
 ##* endregion
 
 
@@ -621,6 +578,23 @@ export WD_SWCOMPONENT='verify'
 
 unset WD_SWCOMPONENT
 ##*	endregion
+
+unset verifyMergeSucceeded
+# Verify: did keepassxc-cli report success from the merge operation?
+if [ -z "$disable_verification" ]; then
+	if [ -f "$kpxcOutputTmpFile" ]; then
+		grep "Successfully" "$kpxcOutputTmpFile"; ans=$?
+		if [[ $ans == 0 ]]; then
+			ifVerbose err_println "Merge verification succeeded"
+			verifyMergeSucceeded='true'
+		else
+			warn "Merge verification failed"
+			verifyMergeSucceeded=''
+		fi
+	else
+		ifDebug err_println "Unable to verify merge operation (no tmpfile to grep from)"
+	fi
+fi
 
 
 
