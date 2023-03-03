@@ -297,6 +297,20 @@ if [ -z ${pop+x} ] && [ -z "$out_password_file" ]; then
 else
 	in_nop=''
 fi
+
+
+# Verify input kdbx credentials
+verifyKdbxInputCredentials; ans=$?
+verificationSuccess='true'
+if [ -z $ans ]; then
+	&& ifDebug err_println "input credentials verification succeeded"
+else
+	warn "Input credentials verification failed. Please check your input keyfile and password. Re-keying operation will fail."
+	prompt "Proceed with execution in spite of failed verificaiton (failure lies ahead)?" 1
+
+	verificationSuccess='false'
+fi
+
 ##################################################################################
 ##                                                                              ##
 ## AT THIS POINT, the following conditions are established:                     ##
@@ -373,8 +387,9 @@ if [ -z $out_password_file ] \
 	fi
 
 fi
+
 createCommand="keepassxc-cli db-create $createOptions $output_fn $createRedirects"
-#ifDebug echo "createCommand: "$createCommand""
+ifDebug echo "createCommand: "$createCommand""
 eval $createCommand
 
 unset mergeCommand
@@ -519,23 +534,31 @@ export WD_SWCOMPONENT='verify'
 ######################################################################
 
 function verifyKdbxInputCredentials() {
+	local oldComp
 	local kpxcCommand
 	local kpxcRedirects
 	local ans
+
+	oldComp="$WD_SWCOMPONENT"
+	export WD_SWCOMPONENT="$WD_SWCOMPONENT: verifyKdbxInputCredentials()"
 	
 	kpxcCommand="keepassxc-cli db-info"
 	kpxcRedirects='2 &> /dev/null'
 	ifDebug kpxcRedirects=''
 	[ ! -z "$in_keyfile" ] \
 		&& kpxcCommand="$kpxcCommand -k $in_keyfile"
-	[ -z "$in_password_file" ] && [ -z ${nip+x} ] \
-		&& kpxcCommand="$kpxcCommand --no-password"
+	if [ -z "$in_password_file" ]; then
+	       	[ -z ${pip+x} ] \
+			&& kpxcCommand="$kpxcCommand --no-password" \
+		|| warn "Unintended usage (pip is undefined yet in_password_file is not well-defined); this may lead to undefined behavior"
+	fi
 	[ ! -z "$in_password_file" ] \
 		&& kpxcRedirects="$kpxcRedirects < $in_password_file"
 	
-	ifDebug err_println "VERIFICATION: executing $kpxcCommand $kpxcRedirects"
+	ifDebug err_println "executing $kpxcCommand $kpxcRedirects"
 	ans=$kpxcCommand $kpxcRedirects
 
+	export WD_SWCOMPONENT="$oldComp"
 	return $ans
 }
 
