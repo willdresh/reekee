@@ -39,7 +39,7 @@ function anyKeyContinue() {
 ## answer after $tries attempts, then we will call 'exit [onFailure_exit_code]'
 ##
 ## when onFailure_exit_code is NOT supplied, then exceeding $tries attempts
-## to get a response will cause promptYesNo to return 0
+## to get a response will cause promptYesNo to return 2
 function promptYesNo() {
 	local tries
 	tries=3
@@ -64,8 +64,12 @@ function promptYesNo() {
 	done
 
 	# If we ran out of tries AND a second argument to promptYesNo was supplied
-	if [ $tries -le 0 ] && [ $# -ge 2 ]; then
-		exit $2;
+	if [ $tries -le 0 ]; then
+		if [ $# -ge 2 ]; then
+			exit $2;
+		else
+			exit 2;
+		fi
 	fi
 	# Note: in the case where we ran out of tries but no second argument was supplied,
 	#   execution will continue and promptYesNo will return false
