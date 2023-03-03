@@ -30,6 +30,7 @@ unset defaultCreateOptions
 unset defaultCreateRedirects
 unset defaultMergeOptions
 unset defaultMergeRedirects
+unset defaultKpxcRedirects
 
 
 ## Recommended default behavior established below:
@@ -48,16 +49,21 @@ eval ifDebug true || ifVerbose defaultMergeOptions=""
 [ -z ${defaultMergeOptions+x} ] \
 	&& defaultMergeOptions="-q"
 
-mergeTmpFile="$(mktemp)"
-my_tmpFiles="$my_tmpFiles $mergeTmpFile"
-ifDebug err_println "registering tempfile $mergeTmpFile to house output of keepassxc-cli merge"
-ifDebug (\
-	promptYesNo "enable tempfile verification of output kdbx?"; ans=$?; \
-	[[ $ans == 0 ]] && defaultMergeRedirects="" \
-	)
-[ -z ${defaultMergeRedirects+x} ] \
-	&& defaultMergeRedirects="> $mergeTmpFile"
+
+if [ -z "$disable_verification" ]; then
+	kpxcOutputTmpFile="$(mktemp)"
+	defaultMergeRedirects="> $kpxcOutputTmpFile"
+	my_tmpFiles="$my_tmpFiles $kpxcOutputTmpFile"
+	ifDebug err_println "registering tempfile $kpxcOutputTmpFile to house output of keepassxc-cli commands"
 	#&& defaultMergeRedirects="&> '$kpxc_output"
+else
+	defaultMergeRedirects=""
+fi
+
+# TODO: enabling the redirect 2&> /dev/null DOES suppress the stderr output as desired,
+# but also removes the STDOUT output, meaning that no keyfile actually gets created!
+# Need to fix this so that stderr can be suppressed AND stdout can still work as intended
+#ifDebug eval true || defaultMergeRedirects="$defaultMergeRedirects 2&> /dev/null"
 
 ##*	endregion
 
@@ -73,7 +79,7 @@ function verifyInputKdbxCredentials() {
 	export WD_SWCOMPONENT="$WD_SWCOMPONENT: verifyInputKdbxCredentials()"
 	
 	kpxcCommand="keepassxc-cli db-info"
-	kpxcRedirects="$defaultMergeRedirects"
+	kpxcRedirects="$defaultKpxcRedirects"
 	[ ! -z "$in_keyfile" ] \
 		&& kpxcCommand="$kpxcCommand -k $in_keyfile"
 	if [ -z "$in_password_file" ]; then
@@ -508,8 +514,8 @@ eval $mergeCommand
 
 unset verifyMergeSucceeded
 # Verify: did keepassxc-cli report success from the merge operation?
-if [ -f "$mergeTmpFile" ]; then
-	grep "Successfully" "$mergeTmpFile"; ans=$?
+if [ -f "$kpxcOutputTmpFile" ]; then
+	grep "Successfully" "$kpxcOutputTmpFile"; ans=$?
 	if [[ $ans == 0 ]]; then
 		ifDebug err_println "Merge verification succeeded"
 		verifyMergeSucceeded='true'

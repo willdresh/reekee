@@ -65,6 +65,12 @@ long=prompt-pass-out
 flag=true
 description=Ask rekey to prompt the user to enter and confirm a new password (for new, re-keyed kdbx) (not valid when \'op\' option is specified)
 ---
+name=disable_verification
+short=dv
+long=disable-verification
+flag=true
+description=Disable verification procedures
+---
 name=quiet
 short=q
 long=quiet
