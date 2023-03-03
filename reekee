@@ -39,7 +39,7 @@ eval ifDebug true || ifVerbose defaultCreateOptions=""
 
 ifDebug defaultCreateRedirects=""
 [ -z ${defaultCreateRedirects+x} ] \
-	&& defaultCreateRedirects=" 2&> /dev/null"
+	&& defaultCreateRedirects="&> /dev/null"
 
 eval ifDebug true || ifVerbose defaultMergeOptions=""
 [ -z ${defaultMergeOptions+x} ] \
@@ -47,11 +47,48 @@ eval ifDebug true || ifVerbose defaultMergeOptions=""
 
 ifDebug defaultMergeRedirects=""
 [ -z ${defaultMergeRedirects+x} ] \
-	&& defaultMergeRedirects=" 2 &> /dev/null"
+	&& defaultMergeRedirects="&> /dev/null"
 
 ##*	endregion
 
+##*	region Functions
 
+function verifyInputKdbxCredentials() {
+	local oldComp
+	local kpxcCommand
+	local kpxcRedirects
+	local ans
+
+	oldComp="$WD_SWCOMPONENT"
+	export WD_SWCOMPONENT="$WD_SWCOMPONENT: verifyInputKdbxCredentials()"
+	
+	kpxcCommand="keepassxc-cli db-info"
+	kpxcRedirects='&> /dev/null'
+	#ifDebug kpxcRedirects=''
+	[ ! -z "$in_keyfile" ] \
+		&& kpxcCommand="$kpxcCommand -k $in_keyfile"
+	if [ -z "$in_password_file" ]; then
+	       	[ -z ${pip+x} ] \
+			&& kpxcCommand="$kpxcCommand --no-password" \
+		|| warn "Unintended usage (pip is undefined yet in_password_file is not well-defined); this may lead to undefined behavior"
+	fi
+	[ ! -z "$in_password_file" ] \
+		&& kpxcRedirects="$kpxcRedirects < $in_password_file"
+	
+	kpxcCommand="$kpxcCommand $input_fn $kpxcRedirects"
+	ifDebug err_println_basic
+	ifDebug err_println "verification command:"
+	ifDebug err_println_basic "$kpxcCommand"
+	ifDebug err_println_basic
+
+	eval "$kpxcCommand"; ans=$?
+	ifDebug err_println "kpxc exit status: $ans"
+
+	export WD_SWCOMPONENT="$oldComp"
+	return $ans
+}
+
+##*	endregion
 
 
 ##*	region Startup Checks
@@ -128,6 +165,19 @@ outDir="$( dirname $output_fn )"
 	&& outDir="./" # dirname does not append a slash to the end of . - so we will (if needed)
 [ -z "$output_fn" ] || [ -d "$output_fn" ] \
 	&& crashland 51 'No output file specified, or the specified output file exists and is a directory'
+
+# Verify input kdbx credentials
+verifyInputKdbxCredentials; ans=$?
+verificationSuccess='true'
+if [[ $ans == 0 ]]; then
+	ifVerbose err_println "input kdbx credentials verification succeeded"
+else
+	warn "Input credentials verification failed. Please check your input keyfile and password. Re-keying operation will fail."
+	promptYesNo "Proceed with execution in spite of failed verificaiton (failure lies ahead)?" 1
+
+	verificationSuccess='false'
+fi
+
 if [ -e "$output_fn" ]; then
 	[ ! -f "$output_fn" ] \
 		&& crashland 51 'Output file already exists and is not a regular file'
@@ -298,18 +348,6 @@ else
 	in_nop=''
 fi
 
-
-# Verify input kdbx credentials
-verifyKdbxInputCredentials; ans=$?
-verificationSuccess='true'
-if [ -z $ans ]; then
-	&& ifDebug err_println "input credentials verification succeeded"
-else
-	warn "Input credentials verification failed. Please check your input keyfile and password. Re-keying operation will fail."
-	prompt "Proceed with execution in spite of failed verificaiton (failure lies ahead)?" 1
-
-	verificationSuccess='false'
-fi
 
 ##################################################################################
 ##                                                                              ##
@@ -532,36 +570,6 @@ export WD_SWCOMPONENT='verify'
 ###                            mark V                             ####
 ##                                                               #####
 ######################################################################
-
-function verifyKdbxInputCredentials() {
-	local oldComp
-	local kpxcCommand
-	local kpxcRedirects
-	local ans
-
-	oldComp="$WD_SWCOMPONENT"
-	export WD_SWCOMPONENT="$WD_SWCOMPONENT: verifyKdbxInputCredentials()"
-	
-	kpxcCommand="keepassxc-cli db-info"
-	kpxcRedirects='2 &> /dev/null'
-	ifDebug kpxcRedirects=''
-	[ ! -z "$in_keyfile" ] \
-		&& kpxcCommand="$kpxcCommand -k $in_keyfile"
-	if [ -z "$in_password_file" ]; then
-	       	[ -z ${pip+x} ] \
-			&& kpxcCommand="$kpxcCommand --no-password" \
-		|| warn "Unintended usage (pip is undefined yet in_password_file is not well-defined); this may lead to undefined behavior"
-	fi
-	[ ! -z "$in_password_file" ] \
-		&& kpxcRedirects="$kpxcRedirects < $in_password_file"
-	
-	ifDebug err_println "executing $kpxcCommand $kpxcRedirects"
-	ans=$kpxcCommand $kpxcRedirects
-
-	export WD_SWCOMPONENT="$oldComp"
-	return $ans
-}
-
 
 unset WD_SWCOMPONENT
 ##*	endregion
