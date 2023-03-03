@@ -9,13 +9,14 @@ function err_println_basic() {
 }
 
 function err_print() {
-	[ ! -z ${WD_SWASSEMBLY+x} ] && err_print_basic "$WD_SWASSEMBLY: "
-	[ ! -z ${WD_SWCOMPONENT+x} ] && err_print_basic "$WD_SWCOMPONENT: "
-	err_print_basic "$@"
+	err_print_basic "[$$]"
+	[ ! -z ${WD_SWASSEMBLY+x} ] && err_print_basic " $WD_SWASSEMBLY:"
+	[ ! -z ${WD_SWCOMPONENT+x} ] && err_print_basic "$WD_SWCOMPONENT:"
+	err_print_basic " $@"
 }
 
 function err_println() {
-	err_print "$@"
+	[[ $# != 0 ]] && err_print "$@"
 	err_println_basic ''
 }
 

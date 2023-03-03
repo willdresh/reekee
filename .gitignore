@@ -1,5 +1,6 @@
 plugin/bargs/bargs_vars.original
 .*.swp
-test
 tmp*
 *.kdbx
+test*
+example.sh*

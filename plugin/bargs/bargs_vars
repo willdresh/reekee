@@ -11,6 +11,12 @@ long=out
 description=Path where new (re-keyed) keyfile will be saved (defaults to ./rekeyed.kdbx if not specified)
 default=rekeyed.kdbx
 ---
+name=overwrite_out_fn
+short=oo
+long=overwrite-out
+description=Overwrite existing output kdbx file without first prompting for confirmation
+flag=true
+---
 name=in_keyfile
 short=ik
 long=in-keyfile
@@ -29,8 +35,8 @@ long=in-password-file
 description=Path to file that contains password to unlock input kdbx
 allow_empty=true
 ---
-name=sd_outpass
-short=sdop
+name=sd_inpass
+short=sdip
 long=shred-input-password
 description=If specified, the input password file passed using the -ip option will be securely deleted after this script executes (this flag is only valid along with the -ip option)
 flag=true
@@ -59,6 +65,12 @@ long=prompt-pass-out
 flag=true
 description=Ask rekey to prompt the user to enter and confirm a new password (for new, re-keyed kdbx) (not valid when \'op\' option is specified)
 ---
+name=disable_verification
+short=dv
+long=disable-verification
+flag=true
+description=Disable verification procedures
+---
 name=quiet
 short=q
 long=quiet
@@ -77,7 +89,7 @@ description=Debug mode (lots of output)(implies !quiet && verbose)
 flag=true
 ---
 name=bargs
-description=bash rekey [options]
+description=bash reekee [options]
 default=irrelevant
 ---
 ---

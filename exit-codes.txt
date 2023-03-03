@@ -1,13 +1,23 @@
 NORMAL OPERATION EXIT CODES
-0	Success
+0	Success - operation completed and all verification checks passed
 1	Operation cancelled by user
+2	Operation completed, but one or more verification checks failed
+3	Unable to obtain valid yes/no response when prompted
+		(this usually means the input stream was non-interactive and did
+		not expect to be asked - but it could also mean something else)
+4	unused
+5	unused
+6	Interrupted with signal TERM - not to worry, tempfiles will be deleted if necessary
+7	Interrupted with signal INT - not to worry, tempfiles will be deleted if necessary
+8	Interrupted with signal QUIT - not to worry, tempfiles will be deleted if necessary
 
 APPLICATION ERROR EXIT CODES
-99	Could not verify successful creation of in_password_file
 66	Could not verify successful creation of out_password_file
+99	Could not verify successful creation of in_password_file
 
 USERSPACE ERROR EXIT CODES
 11	keepassxc-cli not detected
+12	unable to remove pre-existing output_fn (only possible if --overwrite-out was specified OR user answered yes when asked to remove)
 
 VALIDATION FAILED EXIT CODES
 50	input kdbx file not specified, does not exist, is not readable, or is not a regular file
@@ -20,6 +30,7 @@ VALIDATION FAILED EXIT CODES
 55	input password file specified, but does not exist, is not a regular file, or is not readable
 56	both prompt-out-password and out-password-file specified
 57	both prompt-in-password and in-password-file specified
+58	directory of output keyfile does not exist
 
 OTHER EXIT CODES
 2	infinite loop safeguard
