@@ -68,10 +68,10 @@ unset my_tmpFiles
 unset my_outpass_file
 
 rmTmpFilesCommand=\
-'eval "[[ ! -z \""$my_tmpFiles"\" ]] && shred -fun 5 $my_tmpFiles && err_println_basic && err_println "cleaned up tempfiles $my_tmpFiles with shred -fun 5""'
+'eval "[[ ! -z \""$my_tmpFiles"\" ]] && shred -fun 5 $my_tmpFiles && err_println_basic && err_println "shred -fun 5 $my_tmpFiles""'
 
 ifDebug rmTmpFilesCommand=\
-'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && err_println_basic && err_println "cleaned up tempfiles $my_tmpFiles with rm -f""'
+'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && err_println_basic && err_println "rm -f $my_tmpFiles""'
 
 trap "exit 6" TERM
 trap "exit 7" INT
