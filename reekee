@@ -15,7 +15,7 @@ unset my_outpass_file
 ##*	region Aliases
 alias ifDebug='[[ ! -z "$debug" ]] && [[ "$debug" != false ]] && [[ "$debug" != "0" ]] && '
 alias ifVerbose='([[ ! -z "$verbose" ]] && [[ "$verbose" != false ]] && [[ "$verbose" != "0" ]] ) && '
-alias ifNotQuiet='([[ -z "$quiet" ]] || [[ "$quiet" == false ]] || [[ "$quiet" == "0" ]] && '
+alias ifNotQuiet='( [[ -z "$quiet" ]] || [[ "$quiet" == false ]] || [[ "$quiet" == "0" ]] ) && '
 alias ifPromptOutPass='[[ ! -z "$prompt_output_password" ]] && [[ "$prompt_output_password" != false ]] && [[ "$prompt_output_password" != "0" ]] && '
 alias ifPromptInPass='[[ ! -z "$prompt_input_password" ]] && [[ "$prompt_input_password" != false ]] && [[ "$prompt_input_password" != "0" ]] && '
 alias ifSDOutPass='[[ ! -z "$sd_outpass" ]] && [[ "$sd_outpass" != false ]] && [[ "$sd_outpass" != "0" ]] && '
@@ -42,7 +42,7 @@ ifDebug eval true || ifVerbose defaultCreateOptions=""
 
 defaultCreateRedirects="2> /dev/null"
 
-# Using -q switch with mergeOptions seems to break merge verification, so we will only do so
+# Using -q switch with mergeOptions breaks non-exit-status merge verification, so we will only do so
 # if verification is disabled
 defaultMergeOptions=""
 
@@ -51,7 +51,7 @@ my_tmpFiles="$my_tmpFiles $kpxcOutputTmpFile"
 ifDebug err_println "registering tempfile $kpxcOutputTmpFile to house output of keepassxc-cli commands"
 if [ -z "$disable_verification" ]; then
 	defaultInfoRedirects="> $kpxcOutputTmpFile"
-	defaultInfoOptions="-q"
+	ifDebug eval true || defaultInfoOptions="-q"
 	defaultMergeRedirects=">> $kpxcOutputTmpFile"
 else
 	defaultMergeRedirects="> $kpxcOutputTmpFile"
@@ -62,10 +62,12 @@ fi
 # Need to fix this so that stderr can be suppressed AND stdout can still work as intended
 ifDebug eval true || defaultMergeRedirects="$defaultMergeRedirects 2> /dev/null"
 
-#echo "defaultMergeRedirects: $defaultMergeRedirects"
-#echo "defaultMergeOptions: $defaultMergeOptions"
-#echo "defaultCreateRedirects: $defaultCreateRedirects"
-#echo "defaultCreateOptions: $defaultCreateOptions"
+ifDebug echo "defaultInfoOptions: $defaultInfoOptions"
+ifDebug echo "defualtInfoRedirects: $defaultInfoRedirects"
+ifDebug echo "defaultCreateRedirects: $defaultCreateRedirects"
+ifDebug echo "defaultCreateOptions: $defaultCreateOptions"
+ifDebug echo "defaultMergeRedirects: $defaultMergeRedirects"
+ifDebug echo "defaultMergeOptions: $defaultMergeOptions"
 
 ##*	endregion
 
@@ -127,14 +129,17 @@ ifDebug err_println 'begin'
 
 
 # For testing without the --debug flag, this section is disabled so that rm -f will always be used
-#rmTmpFilesCommand=\
-#'eval "[[ ! -z \""$my_tmpFiles"\" ]] && shred -fun 5 $my_tmpFiles && err_println_basic && err_println "Temporary files securely deleted""'
-#
-#
-#ifDebug rmTmpFilesCommand=\
-#'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && err_println_basic && err_println "rm -f $my_tmpFiles""'
 rmTmpFilesCommand=\
-'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && ifDebug err_println_basic && ifDebug err_println "rm -f $my_tmpFiles""'
+'eval "[[ ! -z \""$my_tmpFiles"\" ]] && shred -fun 5 $my_tmpFiles && ifVerbose err_println "Temporary files securely deleted";"'
+
+
+ifDebug rmTmpFilesCommand=\
+'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && err_println_basic && err_println "rm -f $my_tmpFiles""'
+
+# Uncomment the following section while testing commands WITHOUT the --debug flag
+#rmTmpFilesCommand=\
+#'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && ifDebug err_println_basic && ifDebug err_println "rm -f $my_tmpFiles""'
+#echo "Hard-coded debugging mode enabled; temp files will be (insecurely) deleted with rm -f REGARDLESS whether --debug was specified"
 
 trap "exit 6" TERM
 trap "exit 7" INT
@@ -142,7 +147,7 @@ trap "exit 8" QUIT
 
 #Uncomment to always display which tempfiles were cleaned
 #trap "debug=true; ifDebug err_println_basic; ifDebug err_println 'done'; $rmTmpFilesCommand" EXIT
-trap "ifDebug err_println_basic; ifDebug err_println 'done'; $rmTmpFilesCommand" EXIT
+trap "$rmTmpFilesCommand" EXIT
 
 
 # Check availability of keepassxc-cli command
@@ -159,7 +164,7 @@ kpcli="$(which keepassxc-cli)"
 	#xml_file="tmp$RANDOM.xml"
 #done
 
-
+ifDebug err_println "done"
 unset WD_SWCOMPONENT
 ##*	endregion
 
@@ -195,11 +200,9 @@ outDir="$( dirname $output_fn )"
 # Verify input kdbx credentials
 verifyInputKdbxCredentials; ans=$?
 verificationSuccess='true'
-if [[ $ans == 0 ]]; then
-	ifVerbose err_println "input kdbx credentials verification succeeded"
-else
+if [[ $ans != 0 ]]; then
 	warn "Input credentials verification failed. Please check your input keyfile and password. Re-keying operation will fail."
-	promptYesNo "Proceed with execution in spite of failed verificaiton (failure lies ahead)?" 1
+	promptYesNo "Proceed with execution (failure lies ahead)?" 1
 
 	verificationSuccess='false'
 fi
@@ -457,13 +460,14 @@ if [ -z $out_password_file ] \
 fi
 
 createCommand="keepassxc-cli db-create $createOptions $output_fn $createRedirects"
-ifDebug echo "createCommand: "$createCommand""
-eval $createCommand
+ifDebug ( err_println "createCommand:"; err_println_basic "$createCommand"; err_println_basic; )
+ifVerbose err_print "Creating new database file $output_fn..."
+eval $createCommand; createExitStatus=$?
+ifVerbose err_println_basic
 
 unset mergeCommand
 mergeOptions="$defaultMergeOptions"
 mergeRedirects="$defaultMergeRedirects"
-#echo "mergeRedirects begin: $mergeRedirects"
 ## If in_keyfile specified
 [ ! -z "$in_keyfile" ] \
 	&& mergeOptions="$mergeOptions --key-file-from "$in_keyfile"" # Stage path-to-inkeyfile as argument to keepassxc-cli merge
@@ -526,24 +530,19 @@ else
 fi
 
 mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedirects"
-ifDebug err_println 'executing mergeCommand:'
-ifDebug err_println_basic "$mergeCommand"
-if [ -z "$disable_verification" ]; then
-	# Print a prefix if the merge command is going to produce output to terminal
-	# (the prefix contains more spacing if multi-line output is expected, i.e. in debug mode)
-	ifDebug ( \
-		err_println_basic; err_println_basic; \
-		err_println_basic "Begin Output from keepassxc-cli"; \
-	) || err_print_basic 'keepassxc-cli: '
+ifDebug (err_println_basic; err_println 'executing mergeCommand:' )
+ifDebug err_println_basic "$mergeCommand" \
+	|| ifVerbose ( err_println "Merging source kdbx into destination..." )
+ifDebug ( \
+	err_println_basic; err_println_basic; \
+	err_println_basic "Begin Output from keepassxc-cli"; \
+) || ifNotQuiet err_print_basic 'keepassxc-cli: '
 
-fi
 eval $mergeCommand; mergeExitStatus=$?
-ifDebug ( err_println_basic; err_println_basic "End output from keepassxc-cli"; )
-ifVerbose err_println "keepassxc-cli merge command exited with status code $mergeExitStatus"
+ifDebug ( err_println_basic "End output from keepassxc-cli"; err_println_basic; )
 
 unset WD_SWCOMPONENT
 ##*	endregion
-
 
 
 
@@ -576,28 +575,33 @@ export WD_SWCOMPONENT='verify'
 ##                                                               #####
 ######################################################################
 
-unset WD_SWCOMPONENT
-##*	endregion
+
 
 unset verifyMergeSucceeded
 # Verify: did keepassxc-cli report success from the merge operation?
-if [ -z "$disable_verification" ]; then
-	if [ -f "$kpxcOutputTmpFile" ]; then
-		grep "Successfully" "$kpxcOutputTmpFile"; ans=$?
-		if [[ $ans == 0 ]]; then
-			ifVerbose err_println "Merge verification succeeded"
-			verifyMergeSucceeded='true'
-		else
-			warn "Merge verification failed"
-			verifyMergeSucceeded=''
-		fi
-	else
-		ifDebug err_println "Unable to verify merge operation (no tmpfile to grep from)"
-	fi
+if [ -f "$kpxcOutputTmpFile" ] && [[ "$mergeRedirects" =~ "$kpxcOutputFile" ]]; then
+	ifNotQuiet grepSwitch='-G' \
+		|| grepSwitch='-q'
+	grep "$grepSwitch" "Successfully" "$kpxcOutputTmpFile"; ans=$?
+	verifyMergeSucceeded=$ans
 fi
 
+if [[ $mergeExitStatus == 0 ]]; then
+	[ -z ${verifyMergeSucceeded+x} ] || [[ $verifyMergeSucceeded == 0 ]] \
+		&& verifyMergeSucceeded='true'
+else
+	verifyMergeSucceeded=''
+	warn "Verification failed"
+fi
 
+# Have to wait until after the grep to print this, otherwise it conflicts with
+# output from keepassxc-cli
+ifVerbose err_println "keepassxc-cli merge command exited with status code $mergeExitStatus"
 
+unset WD_SWCOMPONENT
+##*	endregion
+
+ifNotQuiet err_println "All Done!"
 
 unset WD_SWASSEMBLY
 ##* EoF
