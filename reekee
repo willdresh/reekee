@@ -9,6 +9,8 @@ source plugin/wd/wd_errs.sh
 export BARGS_VARS_PATH="${PWD}/plugin/bargs/bargs_vars"
 source plugin/bargs/bargs.sh
 
+unset my_tmpFiles
+unset my_outpass_file
 
 ##*	region Aliases
 alias ifDebug='[[ ! -z "$debug" ]] && [[ "$debug" != false ]] && [[ "$debug" != "0" ]] && '
@@ -40,14 +42,22 @@ eval ifDebug true || ifVerbose defaultCreateOptions=""
 ifDebug defaultCreateRedirects=""
 [ -z ${defaultCreateRedirects+x} ] \
 	&& defaultCreateRedirects="&> /dev/null"
+	#&& defaultCreateRedirects="&> '$kpxc_output'"
 
 eval ifDebug true || ifVerbose defaultMergeOptions=""
 [ -z ${defaultMergeOptions+x} ] \
 	&& defaultMergeOptions="-q"
 
-ifDebug defaultMergeRedirects=""
+mergeTmpFile="$(mktemp)"
+my_tmpFiles="$my_tmpFiles $mergeTmpFile"
+ifDebug err_println "registering tempfile $mergeTmpFile to house output of keepassxc-cli merge"
+ifDebug (\
+	promptYesNo "enable tempfile verification of output kdbx?"; ans=$?; \
+	[[ $ans == 0 ]] && defaultMergeRedirects="" \
+	)
 [ -z ${defaultMergeRedirects+x} ] \
-	&& defaultMergeRedirects="&> /dev/null"
+	&& defaultMergeRedirects="> $mergeTmpFile"
+	#&& defaultMergeRedirects="&> '$kpxc_output"
 
 ##*	endregion
 
@@ -63,8 +73,7 @@ function verifyInputKdbxCredentials() {
 	export WD_SWCOMPONENT="$WD_SWCOMPONENT: verifyInputKdbxCredentials()"
 	
 	kpxcCommand="keepassxc-cli db-info"
-	kpxcRedirects='&> /dev/null'
-	#ifDebug kpxcRedirects=''
+	kpxcRedirects="$defaultMergeRedirects"
 	[ ! -z "$in_keyfile" ] \
 		&& kpxcCommand="$kpxcCommand -k $in_keyfile"
 	if [ -z "$in_password_file" ]; then
@@ -101,8 +110,6 @@ export WD_SWCOMPONENT='startup'
 ######################################################################
 ifDebug err_println 'begin'
 
-unset my_tmpFiles
-unset my_outpass_file
 
 rmTmpFilesCommand=\
 'eval "[[ ! -z \""$my_tmpFiles"\" ]] && shred -fun 5 $my_tmpFiles && err_println_basic && err_println "shred -fun 5 $my_tmpFiles""'
@@ -433,6 +440,7 @@ eval $createCommand
 unset mergeCommand
 mergeOptions="$defaultMergeOptions"
 mergeRedirects="$defaultMergeRedirects"
+echo "mergeRedirects begin: $mergeRedirects"
 ## If in_keyfile specified
 [ ! -z "$in_keyfile" ] \
 	&& mergeOptions="$mergeOptions --key-file-from "$in_keyfile"" # Stage path-to-inkeyfile as argument to keepassxc-cli merge
@@ -498,6 +506,20 @@ mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedir
 ifDebug echo "executing mergeCommand: "$mergeCommand""
 eval $mergeCommand
 
+unset verifyMergeSucceeded
+# Verify: did keepassxc-cli report success from the merge operation?
+if [ -f "$mergeTmpFile" ]; then
+	grep "Successfully" "$mergeTmpFile"; ans=$?
+	if [[ $ans == 0 ]]; then
+		ifDebug err_println "Merge verification succeeded"
+		verifyMergeSucceeded='true'
+	else
+		err_println "Merge verification failed! Please double-check your output kdbx for existence and integrity!"
+		verifyMergeSucceeded=''
+	fi
+else
+	ifDebug err_println "Unable to verify merge operation (no tmpfile to grep from)"
+fi
 
 unset WD_SWCOMPONENT
 ##*	endregion
