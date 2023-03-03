@@ -30,40 +30,42 @@ unset defaultCreateOptions
 unset defaultCreateRedirects
 unset defaultMergeOptions
 unset defaultMergeRedirects
-unset defaultKpxcRedirects
-
+unset defaultInfoRedirects
+unset defaultInfoOptions
 
 ## Recommended default behavior established below:
 ## if verbose OR debug, then don't pass the -q option
 ## if debug then additionally, don't redirect stderr to /dev/null
-eval ifDebug true || ifVerbose defaultCreateOptions=""
+ifDebug eval true || ifVerbose defaultCreateOptions=""
 [ -z ${defaultCreateOptions+x} ] \
 	&& defaultCreateOptions="-q"
 
 ifDebug defaultCreateRedirects=""
 [ -z ${defaultCreateRedirects+x} ] \
 	&& defaultCreateRedirects="&> /dev/null"
-	#&& defaultCreateRedirects="&> '$kpxc_output'"
 
-eval ifDebug true || ifVerbose defaultMergeOptions=""
-[ -z ${defaultMergeOptions+x} ] \
-	&& defaultMergeOptions="-q"
+# Using -q switch with mergeOptions seems to break merge verification, so we will only do so
+# if verification is disabled
+defaultMergeOptions=""
 
 
+kpxcOutputTmpFile="$(mktemp)"
+my_tmpFiles="$my_tmpFiles $kpxcOutputTmpFile"
+ifDebug err_println "registering tempfile $kpxcOutputTmpFile to house output of keepassxc-cli commands"
 if [ -z "$disable_verification" ]; then
-	kpxcOutputTmpFile="$(mktemp)"
-	defaultMergeRedirects="> $kpxcOutputTmpFile"
-	my_tmpFiles="$my_tmpFiles $kpxcOutputTmpFile"
-	ifDebug err_println "registering tempfile $kpxcOutputTmpFile to house output of keepassxc-cli commands"
-	#&& defaultMergeRedirects="&> '$kpxc_output"
+	defaultInfoRedirects="> $kpxcOutputTmpFile"
+	defaultInfoOptions="-q"
+	defaultMergeRedirects=">> $kpxcOutputTmpFile"
 else
-	defaultMergeRedirects=""
+	defaultMergeRedirects="> $kpxcOutputTmpFile"
 fi
 
-# TODO: enabling the redirect 2&> /dev/null DOES suppress the stderr output as desired,
+# TODO: enabling the redirect 2&>> /dev/null DOES suppress the stderr output as desired,
 # but also removes the STDOUT output, meaning that no keyfile actually gets created!
 # Need to fix this so that stderr can be suppressed AND stdout can still work as intended
-#ifDebug eval true || defaultMergeRedirects="$defaultMergeRedirects 2&> /dev/null"
+#ifDebug eval true || defaultInfoRedirects="$defaultCreateRedirects 2> /dev/null"
+ifDebug eval true || defaultMergeRedirects="$defaultMergeRedirects 2> /dev/null"
+defaultCreateRedirects="$defaultCreateRedirects 2> /dev/null"
 
 ##*	endregion
 
@@ -71,33 +73,37 @@ fi
 
 function verifyInputKdbxCredentials() {
 	local oldComp
-	local kpxcCommand
-	local kpxcRedirects
+	local infoCommand
+	local infoRedirects
+	local infoOptions
 	local ans
+
+	[ ! -z "$disable_verification" ] && return 0
 
 	oldComp="$WD_SWCOMPONENT"
 	export WD_SWCOMPONENT="$WD_SWCOMPONENT: verifyInputKdbxCredentials()"
 	
-	kpxcCommand="keepassxc-cli db-info"
-	kpxcRedirects="$defaultKpxcRedirects"
+	infoOptions="$defaultInfoOptions"
+	infoRedirects="$defaultInfoRedirects"
 	[ ! -z "$in_keyfile" ] \
-		&& kpxcCommand="$kpxcCommand -k $in_keyfile"
+		&& infoOptions="$infoOptions -k $in_keyfile"
 	if [ -z "$in_password_file" ]; then
 	       	[ -z ${pip+x} ] \
-			&& kpxcCommand="$kpxcCommand --no-password" \
+			&& infoOptions="$infoOptions --no-password" \
 		|| warn "Unintended usage (pip is undefined yet in_password_file is not well-defined); this may lead to undefined behavior"
 	fi
 	[ ! -z "$in_password_file" ] \
-		&& kpxcRedirects="$kpxcRedirects < $in_password_file"
+		&& infoRedirects="$infoRedirects < $in_password_file"
 	
-	kpxcCommand="$kpxcCommand $input_fn $kpxcRedirects"
+	infoCommand="keepassxc-cli db-info $infoOptions $input_fn $infoRedirects"
 	ifDebug err_println_basic
 	ifDebug err_println "verification command:"
-	ifDebug err_println_basic "$kpxcCommand"
+	ifDebug err_println_basic "$infoCommand"
 	ifDebug err_println_basic
 
-	eval "$kpxcCommand"; ans=$?
+	eval "$infoCommand"; ans=$?
 	ifDebug err_println "kpxc exit status: $ans"
+	ifDebug err_println_basic
 
 	export WD_SWCOMPONENT="$oldComp"
 	return $ans
@@ -117,11 +123,15 @@ export WD_SWCOMPONENT='startup'
 ifDebug err_println 'begin'
 
 
+# For testing without the --debug flag, this section is disabled so that rm -f will always be used
+#rmTmpFilesCommand=\
+#'eval "[[ ! -z \""$my_tmpFiles"\" ]] && shred -fun 5 $my_tmpFiles && err_println_basic && err_println "Temporary files securely deleted""'
+#
+#
+#ifDebug rmTmpFilesCommand=\
+#'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && err_println_basic && err_println "rm -f $my_tmpFiles""'
 rmTmpFilesCommand=\
-'eval "[[ ! -z \""$my_tmpFiles"\" ]] && shred -fun 5 $my_tmpFiles && err_println_basic && err_println "shred -fun 5 $my_tmpFiles""'
-
-ifDebug rmTmpFilesCommand=\
-'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && err_println_basic && err_println "rm -f $my_tmpFiles""'
+'eval "[[ ! -z \""$my_tmpFiles"\" ]] && rm -f $my_tmpFiles && ifDebug err_println_basic && ifDebug err_println "rm -f $my_tmpFiles""'
 
 trap "exit 6" TERM
 trap "exit 7" INT
@@ -201,12 +211,14 @@ if [ -e "$output_fn" ]; then
 	unset ans
 	promptYesNo "Overwrite existing $output_fn?" 3; ans=$?
 	[ "$ans" -eq 0 ] && exit 1	# Exit (code 1) if answered no
+	err_println_basic # Spacer
 	rm $output_fn; ans=$?
 
 	# If there STILL exists a file $output_fn at this point, then crash
 	[ -e "$output_fn" ] && crash 12 "Unable to remove pre-existing file: $output_fn (rm command exited code $ans)(debug: search $0 for Ze973)"
                                # Ze973
 fi
+
 
 
 if [ ! -z "$in_keyfile" ]; then						# If in_keyfile was specified
@@ -405,6 +417,8 @@ export WD_SWCOMPONENT='exec'
 ##                                                               #####
 ######################################################################
 
+ifDebug err_println "begin"
+
 ## TODO: a lot of this could be more concisely carried out by
 ## input validation subrouting; it's already performing these same checks
 unset createCommand
@@ -446,7 +460,7 @@ eval $createCommand
 unset mergeCommand
 mergeOptions="$defaultMergeOptions"
 mergeRedirects="$defaultMergeRedirects"
-echo "mergeRedirects begin: $mergeRedirects"
+#echo "mergeRedirects begin: $mergeRedirects"
 ## If in_keyfile specified
 [ ! -z "$in_keyfile" ] \
 	&& mergeOptions="$mergeOptions --key-file-from "$in_keyfile"" # Stage path-to-inkeyfile as argument to keepassxc-cli merge
@@ -509,18 +523,24 @@ else
 fi
 
 mergeCommand="keepassxc-cli merge $mergeOptions $output_fn $input_fn $mergeRedirects"
-ifDebug echo "executing mergeCommand: "$mergeCommand""
-eval $mergeCommand
+ifDebug err_println 'executing mergeCommand:'
+err_println_basic "$mergeCommand"
+#ifDebug err_println_basic "$mergeCommand"
+
+# if '-q' is one of our merge options, then expect output from keepassxc-cli to stdout
+# Nothing I can do about it if we want to have merge verification, apparently
+[[ $mergeOptions =~ '-q' ]] || err_print_basic 'keepassxc-cli: '
+eval $mergeCommand; mergeExitStatus=$?
 
 unset verifyMergeSucceeded
 # Verify: did keepassxc-cli report success from the merge operation?
-if [ -f "$kpxcOutputTmpFile" ]; then
+if [ -z "$disable_verification" ] && [ -f "$kpxcOutputTmpFile" ]; then
 	grep "Successfully" "$kpxcOutputTmpFile"; ans=$?
 	if [[ $ans == 0 ]]; then
 		ifDebug err_println "Merge verification succeeded"
 		verifyMergeSucceeded='true'
 	else
-		err_println "Merge verification failed! Please double-check your output kdbx for existence and integrity!"
+		warn "Merge verification failed"
 		verifyMergeSucceeded=''
 	fi
 else
