@@ -446,19 +446,18 @@ else
 	eval '' #  Do nothing
 fi
 
-# If we have no specified file from which to read the password for our output kdbx file
-if [ -z $out_password_file ] \
-	|| [ ! -e $out_password_file ]; then	# Redundant Safeguard; this condition won't exist because of our input validation constraints
-
-	# If user asked to be prompted for output pass
-	if [ -z $out_nop ]; then
-		ifDebug err_println "Line 456 executing; out_nop= $out_nop"
-		createOptions="$createOptions --set-password"
-	else
-		eval ''
-	fi
-
-fi
+## If we have no specified file from which to read the password for our output kdbx file
+#if [ -z $out_password_file ] \
+#	|| [ ! -e $out_password_file ]; then	# Redundant Safeguard; this condition won't exist because of our input validation constraints
+#
+#	# Should be equivalent to `if [ ! -z $prompt_output_password ]`
+#	if [ -z $out_nop ]; then
+#		createOptions="$createOptions --set-password"
+#	else
+#		eval ''
+#	fi
+#
+#fi
 
 createCommand="keepassxc-cli db-create $createOptions $output_fn $createRedirects"
 ifDebug ( err_print "createOptions: "; err_print_basic "$createOptions"; err_println_basic; )
