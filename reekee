@@ -3,8 +3,8 @@
 ##*	Author: Will
 export WD_SWASSEMBLY='reekee'
 
-source plugin/wd/wd_aux.sh
-source plugin/wd/wd_errs.sh
+source plugin/wd/wd_aux
+source plugin/wd/wd_errs
 
 export BARGS_VARS_PATH="${PWD}/plugin/bargs/bargs_vars"
 source plugin/bargs/bargs.sh
