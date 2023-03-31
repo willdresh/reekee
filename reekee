@@ -236,7 +236,7 @@ if [ ! -z "$in_keyfile" ]; then						# If in_keyfile was specified
 		crashland 52 'input keyfile specified, but does not exist'
 	fi
 else
-	# If in_keyfileis not well-defined, then unset it (to formalize its state)
+	# If in_keyfile is not well-defined, then unset it (to formalize its state)
 	unset in_keyfile
 fi
 
@@ -451,7 +451,8 @@ if [ -z $out_password_file ] \
 	|| [ ! -e $out_password_file ]; then	# Redundant Safeguard; this condition won't exist because of our input validation constraints
 
 	# If user asked to be prompted for output pass
-	if [ ! -z ${in_nop+x} ]; then
+	if [ -z $out_nop ]; then
+		ifDebug err_println "Line 456 executing; out_nop= $out_nop"
 		createOptions="$createOptions --set-password"
 	else
 		eval ''
@@ -460,6 +461,7 @@ if [ -z $out_password_file ] \
 fi
 
 createCommand="keepassxc-cli db-create $createOptions $output_fn $createRedirects"
+ifDebug ( err_print "createOptions: "; err_print_basic "$createOptions"; err_println_basic; )
 ifDebug ( err_println "createCommand:"; err_println_basic "$createCommand"; err_println_basic; )
 ifVerbose err_print "Creating new database file $output_fn..."
 eval $createCommand; createExitStatus=$?
