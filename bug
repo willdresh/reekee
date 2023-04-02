@@ -1,1 +1,0 @@
---set-password specified when it shouldnt be AND command hangs: ./reekee -i test/Pass_foobar.kdbx -ip foobar -ik test/old.key -o test/NewPass.kdbx -ok test/new.key --debug
