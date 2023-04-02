@@ -3,8 +3,8 @@
 ##*	Author: Will
 export WD_SWASSEMBLY='reekee'
 
-source plugin/wd/wd_aux.sh
-source plugin/wd/wd_errs.sh
+source /usr/local/lib/wd/wd_aux
+source /usr/local/lib/wd/wd_errs
 
 export BARGS_VARS_PATH="${PWD}/plugin/bargs/bargs_vars"
 source plugin/bargs/bargs.sh
@@ -236,7 +236,7 @@ if [ ! -z "$in_keyfile" ]; then						# If in_keyfile was specified
 		crashland 52 'input keyfile specified, but does not exist'
 	fi
 else
-	# If in_keyfileis not well-defined, then unset it (to formalize its state)
+	# If in_keyfile is not well-defined, then unset it (to formalize its state)
 	unset in_keyfile
 fi
 
@@ -367,13 +367,13 @@ fi
 # Assign variables out_nop and in_nop
 # After this, out_nop will be true iff there is NO output password whatsoever
 # likewise in_nop for the input password
-if [ -z ${pip+x} ] && [ -z "$in_password_file" ]; then
+if [ -z ${pop+x} ] && [ -z "$out_password_file" ]; then
 	out_nop='true'
 else
 	out_nop=''
 fi
 
-if [ -z ${pop+x} ] && [ -z "$out_password_file" ]; then
+if [ -z ${pip+x} ] && [ -z "$in_password_file" ]; then
 	in_nop='true'
 else
 	in_nop=''
@@ -436,7 +436,7 @@ fi
 
 ## If there is to be a password for the output kdbx
 if [ -z "$out_nop" ]; then # "if out_nop is NOT well-defined, then..."
-	createOptions="$createOptions --set-password"
+	createOptions="--set-password $createOptions"
 
 	[ ! -z "$out_password_file" ] \
 		&& createRedirects="$createRedirects < $out_password_file"
@@ -446,18 +446,18 @@ else
 	eval '' #  Do nothing
 fi
 
-# If we have no specified file from which to read the password for our output kdbx file
-if [ -z $out_password_file ] \
-	|| [ ! -e $out_password_file ]; then	# Redundant Safeguard; this condition won't exist because of our input validation constraints
-
-	# If user asked to be prompted for output pass
-	if [ ! -z ${in_nop+x} ]; then
-		createOptions="$createOptions --set-password"
-	else
-		eval ''
-	fi
-
-fi
+## If we have no specified file from which to read the password for our output kdbx file
+#if [ -z $out_password_file ] \
+#	|| [ ! -e $out_password_file ]; then	# Redundant Safeguard; this condition won't exist because of our input validation constraints
+#
+#	# Should be equivalent to `if [ ! -z $prompt_output_password ]`
+#	if [ -z $out_nop ]; then
+#		createOptions="$createOptions --set-password"
+#	else
+#		eval ''
+#	fi
+#
+#fi
 
 createCommand="keepassxc-cli db-create $createOptions $output_fn $createRedirects"
 ifDebug ( err_println "createCommand:"; err_println_basic "$createCommand"; err_println_basic; )
